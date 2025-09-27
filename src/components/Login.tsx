@@ -17,7 +17,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   useEffect(() => {
     // Animation d'entrée pour le formulaire
     document.querySelector('.login-container')?.classList.add('animate-in');
-    onLoginSuccess()
+    // onLoginSuccess()
   }, [onLoginSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
