@@ -76,8 +76,9 @@ const StudentDashboard: React.FC = () => {
         
         setStudent(response.data.student);
         
-      } catch (err: any) {
-        console.error("Erreur lors de la récupération des données:", err.response || err);
+      } catch (err) {
+        if(err instanceof Error)
+        console.error("Erreur lors de la récupération des données:", err.message || err);
         if (paramStudentId) {
           setError('Échec du chargement des informations de l\'étudiant.');
         } else {
@@ -154,10 +155,11 @@ const StudentDashboard: React.FC = () => {
       setUploadMessage("Projet soumis avec succès !");
       setSelectedFile(null);
       
-    } catch (err: any) {
-      console.error("Erreur lors de la soumission du projet:", err.response || err);
-      setUploadMessage(`Erreur de soumission: ${err.response?.data?.message || err.message}`);
-    } finally {
+    } catch (err) {
+      if(err instanceof Error){
+      console.error("Erreur lors de la soumission du projet:", err);
+      setUploadMessage(`Erreur de soumission: ${err.message || err.message}`);
+    }} finally {
       setUploading(false);
     }
   };

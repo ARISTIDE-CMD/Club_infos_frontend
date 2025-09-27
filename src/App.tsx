@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashoard';
+// import Dashboard from './components/EditStudent';
 import CreateStudent from './components/CreateStudent';
 import EditStudent from './components/EditStudent';
 import Home from './components/Home';
@@ -38,7 +39,7 @@ const App: React.FC = () => {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login onLoginSuccess={()=>{}} />} />
 
           {/* Routes protégées pour les administrateurs */}
           <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />

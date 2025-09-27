@@ -16,6 +16,11 @@ interface Student {
         email: string;
     };
 }
+type stude={
+    id:number;
+    last_name:string;
+    first_name:string
+}
 
 interface Project {
     id: number;
@@ -61,72 +66,72 @@ const Dashboard: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [view, setView] = useState<'students' | 'projects' | 'results'>('students');
     // États pour gérer l'évaluation
-    const [evaluations, setEvaluations] = useState({});
-    const [evaluationLoading, setEvaluationLoading] = useState(false);
+    // const [evaluations, setEvaluations] = useState({});
+    // const [evaluationLoading, setEvaluationLoading] = useState(false);
 
     // Fonction pour gérer l'évaluation d'un projet
-    const handleEvaluation = async (submissionId, grade, comment) => {
-        try {
-            setEvaluationLoading(true);
-            const token = localStorage.getItem("authToken");
+    // const handleEvaluation = async (submissionId: number, grade: number, comment: string) => {
+    //     try {
+    //         setEvaluationLoading(true);
+    //         const token = localStorage.getItem("authToken");
 
-            if (!token) {
-                setMessage("Non autorisé. Veuillez vous connecter.");
-                // Timer pour effacer le message après 2 secondes
-                let compt = 0;
-                const intervall = setInterval(() => {
-                    compt++;
-                    if (compt === 2) {
-                        setMessage('');
-                        clearInterval(intervall);
-                    }
-                }, 1000);
-                return;
-            }
+    //         if (!token) {
+    //             setMessage("Non autorisé. Veuillez vous connecter.");
+    //             // Timer pour effacer le message après 2 secondes
+    //             let compt = 0;
+    //             const intervall = setInterval(() => {
+    //                 compt++;
+    //                 if (compt === 2) {
+    //                     setMessage('');
+    //                     clearInterval(intervall);
+    //                 }
+    //             }, 1000);
+    //             return;
+    //         }
 
-            const response = await api.post(`/submissions/${submissionId}/evaluate`, {
-                grade: grade,
-                comment: comment
-            }, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+    //         const response = await api.post(`/submissions/${submissionId}/evaluate`, {
+    //             grade: grade,
+    //             comment: comment
+    //         }, {
+    //             headers: { Authorization: `Bearer ${token}` },
+    //         });
 
-            if (response.data.success) {
-                setMessage("Évaluation enregistrée avec succès !");
-                // Mettre à jour la soumission avec l'évaluation
-                setSubmissions(prev => prev.map(sub =>
-                    sub.id === submissionId
-                        ? { ...sub, ...response.data.evaluation }
-                        : sub
-                ));
-            }
+    //         if (response.data.success) {
+    //             setMessage("Évaluation enregistrée avec succès !");
+    //             // Mettre à jour la soumission avec l'évaluation
+    //             setSubmissions(prev => prev.map(sub =>
+    //                 sub.id === submissionId
+    //                     ? { ...sub, ...response.data.evaluation }
+    //                     : sub
+    //             ));
+    //         }
 
-            // Timer pour effacer le message après 2 secondes
-            let compt = 0;
-            const intervall = setInterval(() => {
-                compt++;
-                if (compt === 2) {
-                    setMessage('');
-                    clearInterval(intervall);
-                }
-            }, 1000);
+    //         // Timer pour effacer le message après 2 secondes
+    //         let compt = 0;
+    //         const intervall = setInterval(() => {
+    //             compt++;
+    //             if (compt === 2) {
+    //                 setMessage('');
+    //                 clearInterval(intervall);
+    //             }
+    //         }, 1000);
 
-        } catch (error) {
-            console.error("Erreur lors de l'évaluation:", error);
-            setMessage("Erreur lors de l'enregistrement de l'évaluation.");
+    //     } catch (error) {
+    //         console.error("Erreur lors de l'évaluation:", error);
+    //         setMessage("Erreur lors de l'enregistrement de l'évaluation.");
 
-            let compt = 0;
-            const intervall = setInterval(() => {
-                compt++;
-                if (compt === 2) {
-                    setMessage('');
-                    clearInterval(intervall);
-                }
-            }, 1000);
-        } finally {
-            setEvaluationLoading(false);
-        }
-    };
+    //         let compt = 0;
+    //         const intervall = setInterval(() => {
+    //             compt++;
+    //             if (compt === 2) {
+    //                 setMessage('');
+    //                 clearInterval(intervall);
+    //             }
+    //         }, 1000);
+    //     } finally {
+    //         setEvaluationLoading(false);
+    //     }
+    // };
     const fetchStudents = async () => {
         try {
             const token = localStorage.getItem("authToken");
@@ -681,7 +686,7 @@ const Dashboard: React.FC = () => {
                                     <span className="font-semibold">Équipe projet ({submission.project.students.length})</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    {submission.project.students.map((student) => (
+                                    {submission.project.students.map((student:stude) => (
                                         <span
                                             key={student.id}
                                             className="px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium transition-all duration-200 hover:bg-purple-100 hover:border-purple-300 hover:text-purple-800"
@@ -734,7 +739,7 @@ const Dashboard: React.FC = () => {
                                 </label>
                                 <textarea
                                     placeholder="Partagez vos retours sur ce projet..."
-                                    rows="3"
+                                    rows={3}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 resize-vertical"
                                 />
                             </div>
@@ -784,9 +789,9 @@ const Dashboard: React.FC = () => {
                 <div className="flex-1 mt-8 space-y-4">
                     <button
                         onClick={() => setView('students')}
-                        className={`w-full text-left px-2 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'students'
+                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'students'
                             ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
-                            : 'hover:bg-indigo-200 hover:shadow-lg'
+                            : 'hover:bg-indigo-400 hover:shadow-lg'
                             }`}
                     >
                         <span className="text-2xl">📈</span>
@@ -915,11 +920,12 @@ const Dashboard: React.FC = () => {
 
                                 {/* Liste des projets rendus */}
                                 <div className="grid gap-6">
-                                    {submissions.map((submission, index) => {
+                                    {submissions.map(submission => {
                                         // Calcul de la durée entre création du projet et soumission
                                         const projectCreatedAt = new Date(submission.project?.created_at);
                                         const submissionCreatedAt = new Date(submission.created_at);
-                                        const durationMs = submissionCreatedAt - projectCreatedAt;
+                                       const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
+
                                         const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
                                         const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 

@@ -35,10 +35,11 @@ const CreateStudent: React.FC = () => {
                 class_group: '',
             });
 
-        } catch (error: any) {
+        } catch (error) {
+            if(error instanceof Error){
             console.error('Erreur lors de la création de l\'étudiant:', error);
-            setMessage(error.response?.data?.message || 'Erreur lors de la création de l\'étudiant.');
-        }
+            setMessage(error.message || 'Erreur lors de la création de l\'étudiant.');
+        }}
     };
 
     return (

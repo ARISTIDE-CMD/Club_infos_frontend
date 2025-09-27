@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+// import api from '../api';
 
 const CreateProject: React.FC = () => {
   const [name, setName] = useState('');
-  const [title, setTitle] = useState('');
+  // const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -16,17 +16,19 @@ const CreateProject: React.FC = () => {
     setMessage('');
     
     try {
-      const response = await api.post('/projects', { name, description }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-      });
-      const response = await api.post('/projects', { title, description });
+      // const response = await api.post('/projects', { name, description }, {
+      //   headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      // });
+      // const response = await api.post('/projects', { title, description });
       
       setMessage('Projet créé avec succès ! Redirection vers le tableau de bord...');
       setTimeout(() => navigate('/dashboard'), 2000);
       
-    } catch (error: any) {
+    } catch (error) {
+      if(error instanceof Error){
       console.error('Erreur lors de la création du projet:', error);
-      setMessage(error.response?.data?.message || 'Erreur lors de la création du projet.');
+      setMessage('Erreur lors de la création du projet.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -53,9 +55,9 @@ const CreateProject: React.FC = () => {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              // id="title"
+              // value={title}
+              // onChange={(e) => setTitle(e.target.value)}
               required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               placeholder="Ex: Refonte du site web"

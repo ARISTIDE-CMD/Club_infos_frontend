@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onLoginSuccess: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -13,7 +17,8 @@ const Login: React.FC = () => {
   useEffect(() => {
     // Animation d'entrée pour le formulaire
     document.querySelector('.login-container')?.classList.add('animate-in');
-  }, []);
+    onLoginSuccess()
+  }, [onLoginSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,15 +46,16 @@ const Login: React.FC = () => {
         }
       }, 1000);
 
-    } catch (error: any) {
-      console.error('Erreur de connexion:', error.response?.data?.message);
-      setMessage(error.response?.data?.message || 'Erreur lors de la connexion.');
+    } catch (error) {
+      if(error instanceof Error){
+      console.error('Erreur de connexion:', error.message);
+      setMessage(error.message || 'Erreur lors de la connexion.');
       
       // Animation d'erreur
       const form = document.querySelector('.login-form');
       form?.classList.add('error-shake');
       setTimeout(() => form?.classList.remove('error-shake'), 500);
-    } finally {
+    }} finally {
       setIsLoading(false);
     }
   };
