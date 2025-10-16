@@ -4,6 +4,8 @@ import api from "../api";
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import './Dash.css'
+import EvaluationForm from "./SubmissionForm";
+
 
 // Interfaces pour la structure des données
 interface Student {
@@ -16,10 +18,10 @@ interface Student {
         email: string;
     };
 }
-type stude={
-    id:number;
-    last_name:string;
-    first_name:string
+type stude = {
+    id: number;
+    last_name: string;
+    first_name: string
 }
 
 interface Project {
@@ -27,17 +29,57 @@ interface Project {
     title: string;
     description: string;
     students: Student[];
+    created_at: string;
 }
+
+interface Student {
+    id: number;
+    first_name: string;
+    last_name: string;
+}
+
+// interface Project {
+//   title: string;
+//   description: string;
+//   students?: Student[];
+// }
+
+interface Submission {
+    id: number;
+    file_path: string;
+    evaluation?: {
+        grade: number | null;
+        comment: string | null;
+    };
+    // filename: string;
+    // created_at: string;
+    // grade?: number;
+    // evaluation_comment?: string;
+    // evaluated_at?: string;
+    // project?: Project;
+    // student?: Student;
+    archiv: boolean
+}
+
+interface SubmissionItemProps {
+    submission: Submission;
+    projectCreatedAt: Date;
+    submissionCreatedAt: Date;
+    durationDays: number;
+    durationHours: number;
+}
+
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const [students, setStudents] = useState<Student[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    const [submissions, setSubmissions] = useState<any[]>([]);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [archive, setArchive] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [isCreateStudentModalOpen, setIsCreateStudentModalOpen] = useState(false);
+    const [isCreateStudentModalOpen, setIsCreateStudentModalOpen] = useState(false)
     const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
     const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
     const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
@@ -47,6 +89,11 @@ const Dashboard: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
     const [update, setUpdate] = useState<boolean>(false)
+    const [submissionToArchive, setSubmissionToArchive] = useState<Submission[]>([]);
+    const [isLoadingLogout, setIsloadinLogout]=useState<boolean>(false)
+    const [filtered, setFiltered] = useState<Submission[]>([])
+    const [grade, setGrade] = useState<number>();
+    // const [comment, setComment] = useState<string>(submissions.evaluation?.comment ?? '');
     const [formDataStudent, setFormDataStudent] = useState({
         first_name: "",
         last_name: "",
@@ -64,74 +111,75 @@ const Dashboard: React.FC = () => {
         student_ids: [] as number[],
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [view, setView] = useState<'students' | 'projects' | 'results'>('students');
+    const [view, setView] = useState<'students' | 'projects' | 'results' | 'archive'>('students');
     // États pour gérer l'évaluation
-    // const [evaluations, setEvaluations] = useState({});
-    // const [evaluationLoading, setEvaluationLoading] = useState(false);
+    const [evaluations, setEvaluations] = useState({});
+    const [evaluationLoading, setEvaluationLoading] = useState(false);
 
     // Fonction pour gérer l'évaluation d'un projet
-    // const handleEvaluation = async (submissionId: number, grade: number, comment: string) => {
-    //     try {
-    //         setEvaluationLoading(true);
-    //         const token = localStorage.getItem("authToken");
+    const handleEvaluation = async (submissionId: number, grade: number, comment: string) => {
+        try {
+            setEvaluationLoading(true);
+            const token = localStorage.getItem("authToken");
 
-    //         if (!token) {
-    //             setMessage("Non autorisé. Veuillez vous connecter.");
-    //             // Timer pour effacer le message après 2 secondes
-    //             let compt = 0;
-    //             const intervall = setInterval(() => {
-    //                 compt++;
-    //                 if (compt === 2) {
-    //                     setMessage('');
-    //                     clearInterval(intervall);
-    //                 }
-    //             }, 1000);
-    //             return;
-    //         }
+            if (!token) {
+                setMessage("Non autorisé. Veuillez vous connecter.");
+                // Timer pour effacer le message après 2 secondes
+                let compt = 0;
+                const intervall = setInterval(() => {
+                    compt++;
+                    if (compt === 2) {
+                        setMessage('');
+                        clearInterval(intervall);
+                    }
+                }, 1000);
+                return;
+            }
 
-    //         const response = await api.post(`/submissions/${submissionId}/evaluate`, {
-    //             grade: grade,
-    //             comment: comment
-    //         }, {
-    //             headers: { Authorization: `Bearer ${token}` },
-    //         });
+            const response = await api.post(`/submissions/${submissionId}/evaluate`, {
+                grade: grade,
+                comment: comment
+            }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
 
-    //         if (response.data.success) {
-    //             setMessage("Évaluation enregistrée avec succès !");
-    //             // Mettre à jour la soumission avec l'évaluation
-    //             setSubmissions(prev => prev.map(sub =>
-    //                 sub.id === submissionId
-    //                     ? { ...sub, ...response.data.evaluation }
-    //                     : sub
-    //             ));
-    //         }
+            if (response.data.success) {
+                setMessage("Évaluation enregistrée avec succès !");
+                console.log("Evaluation enregistrée ...!")
+                // Mettre à jour la soumission avec l'évaluation
+                setSubmissions(prev => prev.map(sub =>
+                    sub.id === submissionId
+                        ? { ...sub, ...response.data.evaluation }
+                        : sub
+                ));
+            }
 
-    //         // Timer pour effacer le message après 2 secondes
-    //         let compt = 0;
-    //         const intervall = setInterval(() => {
-    //             compt++;
-    //             if (compt === 2) {
-    //                 setMessage('');
-    //                 clearInterval(intervall);
-    //             }
-    //         }, 1000);
+            // Timer pour effacer le message après 2 secondes
+            let compt = 0;
+            const intervall = setInterval(() => {
+                compt++;
+                if (compt === 2) {
+                    setMessage('');
+                    clearInterval(intervall);
+                }
+            }, 1000);
 
-    //     } catch (error) {
-    //         console.error("Erreur lors de l'évaluation:", error);
-    //         setMessage("Erreur lors de l'enregistrement de l'évaluation.");
+        } catch (error) {
+            console.error("Erreur lors de l'évaluation:", error);
+            setMessage("Erreur lors de l'enregistrement de l'évaluation.");
 
-    //         let compt = 0;
-    //         const intervall = setInterval(() => {
-    //             compt++;
-    //             if (compt === 2) {
-    //                 setMessage('');
-    //                 clearInterval(intervall);
-    //             }
-    //         }, 1000);
-    //     } finally {
-    //         setEvaluationLoading(false);
-    //     }
-    // };
+            let compt = 0;
+            const intervall = setInterval(() => {
+                compt++;
+                if (compt === 2) {
+                    setMessage('');
+                    clearInterval(intervall);
+                }
+            }, 1000);
+        } finally {
+            setEvaluationLoading(false);
+        }
+    };
     const fetchStudents = async () => {
         try {
             const token = localStorage.getItem("authToken");
@@ -155,6 +203,7 @@ const Dashboard: React.FC = () => {
         } catch (error) {
             console.error("Erreur lors du chargement des étudiants:", error);
             setMessage("Erreur lors du chargement des étudiants.");
+            setStudents([error as unknown as Student]);
             let compt = 0
             const intervall = setInterval(() => {
                 compt++;
@@ -163,6 +212,7 @@ const Dashboard: React.FC = () => {
                     clearInterval(intervall)
                 }
             }, 1000)
+
         } finally {
             setLoading(false);
         }
@@ -187,10 +237,10 @@ const Dashboard: React.FC = () => {
             const response = await api.get("/projects", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const results = await api.get("/results", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log("résultat des projets", results);
+            // const results = await api.get("/results", {
+            //     headers: { Authorization: `Bearer ${token}` },
+            // });
+            // console.log("résultat des projets", results);
 
             setProjects(response.data.projects);
         } catch (error) {
@@ -204,6 +254,7 @@ const Dashboard: React.FC = () => {
                     clearInterval(intervall)
                 }
             }, 1000)
+            setProjects([]);
         }
     };
     const fetchSubmissions = async () => {
@@ -217,28 +268,43 @@ const Dashboard: React.FC = () => {
             if (response.data.success) {
                 // Mettre à jour l'état avec les soumissions récupérées
                 setSubmissions(response.data.submissions);
+                console.log(response.data.submissions);
             } else {
                 console.error('Erreur lors de la récupération des soumissions:', response.data.message);
                 // Optionnel : afficher un message d'erreur à l'utilisateur
             }
         } catch (error) {
             console.error('Erreur API:', error);
+            setSubmissions([]);
             // Gestion des erreurs (afficher un message, etc.)
         } finally {
             setLoading(false);
         }
     };
+    const archivage = (id) => {
+        console.log("items", id)
+        setArchive(!archive)
+        // const filt=submissions.filter(submission=>submission.id!==id)
+        setFiltered(prev =>
+            prev.includes(id)
+                ? prev.filter(f => f !== id) // retire si déjà actif
+                : [...prev, id])
+        // console.log("filtre",filt)
+        const archived = submissions.filter(submission => submission.id === id)
+        setSubmissionToArchive(archived)
+        console.log("sub", submissionToArchive.length)
+    }
+    const filtre = submissions
     useEffect(() => {
-        if (view === 'students') {
-            fetchStudents();
-        } else if (view === 'projects') {
-            fetchProjects();
-        } else if (view === 'results') {
+        fetchStudents();
+        if (view === 'results' || view === 'archive')
             fetchSubmissions();
-        }
+        else if (view === 'projects')
+            fetchProjects();
     }, [view]);
 
     const handleLogout = async () => {
+        setIsloadinLogout(true)
         try {
             await api.post(
                 "/logout",
@@ -246,6 +312,7 @@ const Dashboard: React.FC = () => {
                 { headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` } }
             );
             localStorage.removeItem("authToken");
+            setIsloadinLogout(false)
             navigate("/", { state: { loggedOut: true } });
         } catch (error) {
             console.error("Erreur de déconnexion:", error);
@@ -536,15 +603,16 @@ const Dashboard: React.FC = () => {
             setIsSubmitting(false);
         }
     };
-    const handleDownload = async (submissionId, filename) => {
+    const handleDownload = async (filePath: string) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await api.get(`/submissions/${submissionId}/download`, {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: 'blob'
+
+            const response = await api.get(`/download/${encodeURIComponent(filePath)}`, {
+                headers: { Authorization: `Bearer ${token}` }, // si tu veux sécuriser l’accès
+                responseType: 'blob',
             });
 
-            // Créer un lien de téléchargement
+            const filename = filePath.split('/').pop() || 'fichier.pdf';
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -557,12 +625,14 @@ const Dashboard: React.FC = () => {
             console.error('Erreur de téléchargement:', error);
         }
     };
+
+
     const filteredStudents = students.filter(student =>
         student.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.class_group.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const SubmissionItem = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours }) => {
+    const SubmissionItem: React.FC<SubmissionItemProps> = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours }) => {
         const [isExpanded, setIsExpanded] = useState(false);
 
         return (
@@ -610,12 +680,9 @@ const Dashboard: React.FC = () => {
                         </div>
                         <button
                             className="ml-auto px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`/storage/${submission.file_path}`, '_blank');
-                            }}
+                            onClick={() => archivage(submission.id)}
                         >
-                            📎 Télécharger
+                            {archive ? '📎Désarchiver' : '📎Archiver'}
                         </button>
                     </div>
                 </div>
@@ -641,7 +708,7 @@ const Dashboard: React.FC = () => {
                             </div>
                             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl">
                                 <div className="flex items-center gap-2 text-blue-600 mb-1">
-                                    <span>⏱️</span>
+                                    <span>⏱️ </span>
                                     <span className="font-semibold">Durée</span>
                                 </div>
                                 <p className="text-blue-800 font-bold">{durationDays}j {durationHours}h</p>
@@ -656,7 +723,10 @@ const Dashboard: React.FC = () => {
                                     <span className="font-semibold">Fichier soumis</span>
                                 </div>
                                 <button
-                                    onClick={() => handleDownload(submission.id, submission.filename)}
+                                    onClick={() => {
+                                        handleDownload(submission.file_path)
+                                        console.log(submission.id, submission.file_path)
+                                    }}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
                                 >
                                     <span>⬇️</span>
@@ -686,7 +756,7 @@ const Dashboard: React.FC = () => {
                                     <span className="font-semibold">Équipe projet ({submission.project.students.length})</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    {submission.project.students.map((student:stude) => (
+                                    {submission.project.students.map((student: stude) => (
                                         <span
                                             key={student.id}
                                             className="px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium transition-all duration-200 hover:bg-purple-100 hover:border-purple-300 hover:text-purple-800"
@@ -699,74 +769,11 @@ const Dashboard: React.FC = () => {
                         )}
 
                         {/* Section d'évaluation */}
-                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-2xl border-2 border-indigo-100">
-                            <h5 className="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2">
-                                <span>⭐</span>
-                                Évaluation du projet
-                            </h5>
-
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {/* Champ pour la note */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        📊 Note /20
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="20"
-                                        step="0.5"
-                                        placeholder="0.0 - 20.0"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                                    />
-                                </div>
-
-                                {/* Bouton d'évaluation */}
-                                <div className="flex items-end">
-                                    <button
-                                        className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-                                    >
-                                        <span>💾</span>
-                                        Enregistrer l'évaluation
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Champ pour le commentaire */}
-                            <div className="mt-4">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    💬 Commentaire d'évaluation
-                                </label>
-                                <textarea
-                                    placeholder="Partagez vos retours sur ce projet..."
-                                    rows={3}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 resize-vertical"
-                                />
-                            </div>
-
-                            {/* Affichage de l'évaluation existante */}
-                            {submission.grade && (
-                                <div className="mt-4 p-4 bg-white rounded-xl border border-green-200">
-                                    <div className="flex items-center gap-2 text-green-700 mb-2">
-                                        <span>✅</span>
-                                        <span className="font-semibold">Évaluation enregistrée</span>
-                                    </div>
-                                    <p className="text-lg font-bold text-gray-800">
-                                        Note : <span className="text-green-600">{submission.grade}/20</span>
-                                    </p>
-                                    {submission.evaluation_comment && (
-                                        <p className="text-gray-700 mt-2">
-                                            <span className="font-semibold">Commentaire :</span> {submission.evaluation_comment}
-                                        </p>
-                                    )}
-                                    {submission.evaluated_at && (
-                                        <p className="text-sm text-gray-500 mt-2">
-                                            Évalué le {new Date(submission.evaluated_at).toLocaleDateString('fr-FR')}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                        <EvaluationForm
+                            submissionId={submission.id}
+                            onEvaluate={handleEvaluation}
+                            loading={evaluationLoading}
+                        />
                     </div>
                 )}
             </div>
@@ -794,7 +801,7 @@ const Dashboard: React.FC = () => {
                             : 'hover:bg-indigo-400 hover:shadow-lg'
                             }`}
                     >
-                        <span className="text-2xl">📈</span>
+                        <span className="text-2xl">📈 </span>
                         <span className="font-semibold">Dashboard</span>
                     </button>
 
@@ -816,8 +823,19 @@ const Dashboard: React.FC = () => {
                             : 'hover:bg-indigo-400 hover:shadow-lg'
                             }`}
                     >
-                        <span className="text-2xl">🔼</span>
+                        <span className="text-2xl">🔼 </span>
                         <span className="font-semibold">Dépôts</span>
+
+                    </button>
+                    <button
+                        onClick={() => setView('archive')}
+                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'archive'
+                            ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
+                            : 'hover:bg-indigo-400 hover:shadow-lg'
+                            }`}
+                    >
+                        <span className="text-2xl">💾</span>
+                        <span className="font-semibold">Archives</span>
                     </button>
 
                     {/* <button
@@ -839,13 +857,15 @@ const Dashboard: React.FC = () => {
                     </div>
                     <button
                         onClick={handleLogout}
+                        disabled={isLoadingLogout}
                         className="w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 hover:bg-red-400 hover:shadow-lg transform hover:scale-105"
                     >
-                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                </svg>
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
                         {/* <span className="text-2xl">🔒</span> */}
-                        <span className="font-semibold">Déconnexion</span>
+                        <span className="font-semibold">{!isLoadingLogout?'Déconnexion':'Déconnexion...'}</span>
+                       
                     </button>
                 </div>
             </aside>
@@ -896,6 +916,69 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {/* Vue des projets rendus */}
+                {view === 'archive' && (
+                    <div>
+                        {loading ? (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                                    <p className="text-lg text-gray-600">Chargement des projets archivés...</p>
+                                </div>
+                            </div>
+                        ) : submissions && submissions.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="text-center">
+                                    <h3 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-3 mb-2">
+                                        <span className="text-4xl">📤</span>
+                                        Projets archivés
+                                        <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-lg">
+                                            {submissions.length}
+                                        </span>
+                                    </h3>
+                                    <p className="text-gray-600">Gestion et évaluation des projets soumis par les étudiants</p>
+                                </div>
+
+                                {/* Liste des projets rendus */}
+                                <div className="grid gap-6">
+                                    {filtre
+                                        .sort((a, b) => {
+                                            const dateA = new Date(a.project?.created_at ?? 0).getTime();
+                                            const dateB = new Date(b.project?.created_at ?? 0).getTime();
+                                            return dateA - dateB; // du plus ancien au plus récent
+                                        })
+                                        .map(submission => {
+                                            // Calcul de la durée entre création du projet et soumission
+                                            const projectCreatedAt = new Date(submission.project?.created_at ?? "")
+                                            const submissionCreatedAt = new Date(submission.created_at);
+                                            const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
+
+                                            const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+                                            const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+                                            return (
+                                                <SubmissionItem
+                                                    key={submission.id}
+                                                    submission={submission}
+                                                    projectCreatedAt={projectCreatedAt}
+                                                    submissionCreatedAt={submissionCreatedAt}
+                                                    durationDays={durationDays}
+                                                    durationHours={durationHours}
+                                                />
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="text-center">
+                                    <span className="text-8xl mb-4">📭</span>
+                                    <h3 className="text-2xl font-bold text-gray-600 mb-2">Aucun projet rendu</h3>
+                                    <p className="text-gray-500">Les projets soumis par les étudiants apparaîtront ici.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
                 {view === 'results' && (
                     <div>
                         {loading ? (
@@ -905,8 +988,8 @@ const Dashboard: React.FC = () => {
                                     <p className="text-lg text-gray-600">Chargement des projets rendus...</p>
                                 </div>
                             </div>
-                        ) : submissions && submissions.length > 0 ? (
-                            <div className="space-y-6">
+                        ) : filtre && filtre.length > 0 ? (
+                            <div className="space-y-6" >
                                 <div className="text-center">
                                     <h3 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-3 mb-2">
                                         <span className="text-4xl">📤</span>
@@ -922,9 +1005,9 @@ const Dashboard: React.FC = () => {
                                 <div className="grid gap-6">
                                     {submissions.map(submission => {
                                         // Calcul de la durée entre création du projet et soumission
-                                        const projectCreatedAt = new Date(submission.project?.created_at);
+                                        const projectCreatedAt = new Date(submission.project?.created_at ?? "")
                                         const submissionCreatedAt = new Date(submission.created_at);
-                                       const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
+                                        const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
 
                                         const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
                                         const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -1001,52 +1084,59 @@ const Dashboard: React.FC = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {filteredStudents.length > 0 ? (
-                                            filteredStudents.map((s, index) => {
-                                                const [firstName, ...lastNameParts] = s.user.name.split(" ");
-                                                const lastName = lastNameParts.join(" ");
-                                                return (
-                                                    <tr
-                                                        key={s.id}
-                                                        className="hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300 group"
-                                                        style={{ animationDelay: `${index * 50}ms` }}
-                                                    >
-                                                        <td className="py-5 px-6 font-semibold text-gray-800 group-hover:text-green-700 transition-colors duration-200">
-                                                            {firstName}
-                                                        </td>
-                                                        <td className="py-5 px-6 font-medium text-gray-700 group-hover:text-green-800 transition-colors duration-200">
-                                                            {lastName}
-                                                        </td>
-                                                        <td className="py-5 px-6">
-                                                            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-mono group-hover:bg-green-100 group-hover:text-green-800 transition-all duration-200">
-                                                                {s.student_id}
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-5 px-6">
-                                                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium group-hover:bg-blue-200 transition-all duration-200">
-                                                                {s.class_group}
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-5 px-6">
-                                                            <div className="flex justify-center space-x-3">
-                                                                <button
-                                                                    onClick={() => handleEdit(s)}
-                                                                    className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
-                                                                >
-                                                                    <span>✏️</span>
-                                                                    Modifier
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteStudent(s.id)}
-                                                                    className="px-5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
-                                                                >
-                                                                    <span>🗑️</span>
-                                                                    Supprimer
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
+                                            filteredStudents
+
+                                                .sort((a, b) => {
+                                                    const var1 = a.first_name;
+                                                    const var2 = a.first_name;
+                                                    return var1 - var2
+                                                })
+                                                .map((s, index) => {
+                                                    const [firstName, ...lastNameParts] = s.user.name.split(" ");
+                                                    const lastName = lastNameParts.join(" ");
+                                                    return (
+                                                        <tr
+                                                            key={s.id}
+                                                            className="hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300 group"
+                                                            style={{ animationDelay: `${index * 50}ms` }}
+                                                        >
+                                                            <td className="py-5 px-6 font-semibold text-gray-800 group-hover:text-green-700 transition-colors duration-200">
+                                                                {firstName}
+                                                            </td>
+                                                            <td className="py-5 px-6 font-medium text-gray-700 group-hover:text-green-800 transition-colors duration-200">
+                                                                {lastName}
+                                                            </td>
+                                                            <td className="py-5 px-6">
+                                                                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-mono group-hover:bg-green-100 group-hover:text-green-800 transition-all duration-200">
+                                                                    {s.student_id}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-5 px-6">
+                                                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium group-hover:bg-blue-200 transition-all duration-200">
+                                                                    {s.class_group}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-5 px-6">
+                                                                <div className="flex justify-center space-x-3">
+                                                                    <button
+                                                                        onClick={() => handleEdit(s)}
+                                                                        className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                                    >
+                                                                        <span>✏️</span>
+                                                                        Modifier
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteStudent(s.id)}
+                                                                        className="px-5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                                    >
+                                                                        <span>🗑️</span>
+                                                                        Supprimer
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
                                         ) : (
                                             <tr>
                                                 <td colSpan={5} className="py-16 text-center">

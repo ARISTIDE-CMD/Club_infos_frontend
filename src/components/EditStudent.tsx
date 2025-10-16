@@ -45,6 +45,7 @@ const Dashboard: React.FC = () => {
     // State for editing a student in a modal
     const [showEditModal, setShowEditModal] = useState(false);
     const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+    const [loadingLogOut,setLoadingLogOut] = useState<boolean>(false);
     const [editFormData, setEditFormData] = useState({
         first_name: "",
         last_name: "",
@@ -82,6 +83,7 @@ const Dashboard: React.FC = () => {
     }, [viewMode]);
 
     const handleLogout = async () => {
+        setLoadingLogOut(true);
         try {
             await api.post(
                 "/logout",
@@ -89,6 +91,7 @@ const Dashboard: React.FC = () => {
                 { headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` } }
             );
             localStorage.removeItem("authToken");
+            setLoadingLogOut(false)
             navigate("/", { state: { loggedOut: true } });
         } catch (error) {
             console.error("Erreur de déconnexion:", error);
@@ -122,10 +125,11 @@ const Dashboard: React.FC = () => {
             setNewStudentMatricule('');
             setNewStudentClass('');
             setViewMode('list');
-        } catch (error: any) {
+        } catch (error) {
+            if(error instanceof Error){
             console.error("Erreur lors de la création de l'étudiant:", error);
-            setMessage(error.response?.data?.message || "Erreur lors de la création de l'étudiant.");
-        } finally {
+            setMessage(error.message || "Erreur lors de la création de l'étudiant.");
+       } } finally {
             setIsCreatingStudent(false);
         }
     };
@@ -136,17 +140,18 @@ const Dashboard: React.FC = () => {
         setMessage(null);
 
         try {
-            const response = await api.post('/projects', { name: newProjectName, description: newProjectDescription }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-            });
+            // const response = await api.post('/projects', { name: newProjectName, description: newProjectDescription }, {
+            //     headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            // });
             setMessage('Projet créé avec succès !');
             setShowCreateProjectModal(false);
             setNewProjectName('');
             setNewProjectDescription('');
-        } catch (error: any) {
+        } catch (error) {
+            if(error instanceof Error){
             console.error('Erreur lors de la création du projet:', error);
-            setMessage(error.response?.data?.message || 'Erreur lors de la création du projet.');
-        } finally {
+            setMessage(error.message || 'Erreur lors de la création du projet.');
+        }} finally {
             setIsCreatingProject(false);
         }
     };
@@ -257,7 +262,8 @@ const Dashboard: React.FC = () => {
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-500 transition"
                     >
-                        🚪 Déconnexion
+
+                        {loadingLogOut ? "🚪Déconnexion..." : "🚪 Déconnexion"}
                     </button>
                 </nav>
             </aside>

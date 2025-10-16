@@ -36,6 +36,7 @@ const StudentDashboard: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [loadingLogOut, setLoadingLogOut] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -93,6 +94,7 @@ const StudentDashboard: React.FC = () => {
   }, [paramStudentId, navigate]);
 
   const handleLogout = async () => {
+    setLoadingLogOut(true);
     try {
       await api.post('/logout', {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
@@ -102,6 +104,7 @@ const StudentDashboard: React.FC = () => {
     } finally {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
+      setLoadingLogOut(false);
       navigate('/', { replace: true });
     }
   };
@@ -289,7 +292,7 @@ const StudentDashboard: React.FC = () => {
               className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 self-start"
             >
               <span>🚪</span>
-              Déconnexion
+              {loadingLogOut ? "Déconnexion..." : "Déconnexion"}
             </button>
           </div>
         </div>
