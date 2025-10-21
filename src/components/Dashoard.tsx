@@ -51,13 +51,13 @@ interface Submission {
         grade: number | null;
         comment: string | null;
     };
-    // filename: string;
-    // created_at: string;
-    // grade?: number;
-    // evaluation_comment?: string;
-    // evaluated_at?: string;
-    // project?: Project;
-    // student?: Student;
+    filename: string;
+    created_at: string;
+    grade?: number;
+    evaluation_comment?: string;
+    evaluated_at?: string;
+    project?: Project;
+    student?: Student;
     archiv: boolean
 }
 
@@ -603,7 +603,7 @@ const Dashboard: React.FC = () => {
             setIsSubmitting(false);
         }
     };
-    const handleDownload = async (filePath: string) => {
+    const handleDownload = async (filePath: string, title: string) => {
         try {
             const token = localStorage.getItem('authToken');
 
@@ -616,7 +616,7 @@ const Dashboard: React.FC = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', filename);
+            link.setAttribute('download',filename ); // ou le nom que tu veux donner au fichier
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -724,8 +724,8 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        handleDownload(submission.file_path)
-                                        console.log(submission.id, submission.file_path)
+                                        handleDownload(submission.file_path,submission.project?.title)
+                                        console.log(submission.id, submission.file_path,submission.project?.title)
                                     }}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
                                 >
@@ -813,6 +813,7 @@ const Dashboard: React.FC = () => {
                             }`}
                     >
                         <span className="text-2xl">📂</span>
+                        {/* <ion-icon name="archive"></ion-icon> */}
                         <span className="font-semibold">Projets</span>
                     </button>
 

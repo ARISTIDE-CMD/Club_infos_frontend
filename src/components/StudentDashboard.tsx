@@ -345,6 +345,7 @@ const StudentDashboard: React.FC = () => {
 
             <form onSubmit={handleProjectSubmit} className="space-y-6">
               <div>
+                <a href="https://www.flaticon.com/free-icons/man-avatar" title="man avatar icons">Man avatar icons created by Loka Design - Flaticon</a>
                 <label htmlFor="projectSelect" className="block text-sm font-semibold text-gray-700 mb-2">
                   📁 Sélectionner le projet à soumettre
                 </label>

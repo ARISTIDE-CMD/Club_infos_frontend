@@ -3,7 +3,7 @@ import Login from './Login';
 import { useNavigate } from 'react-router-dom';
 
 const Home: React.FC = () => {
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [backgroundImage, setBackgroundImage] = useState('');
   const navigate = useNavigate();
 
@@ -349,8 +349,12 @@ const Home: React.FC = () => {
 
         {/* Login Modal */}
         {showLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md transform scale-95 animate-slideUp">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn "
+          style={{
+            width:'100%'
+          }}
+          >
+            {/* <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md transform scale-95 animate-slideUp">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900">Connexion Étudiant</h3>
                 <button
@@ -362,8 +366,8 @@ const Home: React.FC = () => {
                   </svg>
                 </button>
               </div>
-              <Login onLoginSuccess={handleLoginSuccess} />
-            </div>
+              </div> */}
+            <Login onLoginSuccess={handleLoginSuccess} setShowLoginModal={setShowLoginModal} />
           </div>
         )}
 

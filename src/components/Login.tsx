@@ -4,9 +4,10 @@ import api from '../api';
 
 interface LoginProps {
   onLoginSuccess: () => void;
+  setShowLoginModal: (show: boolean) => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, setShowLoginModal }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -27,7 +28,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       const response = await api.post('/login', { email, password });
-      
+
       const { token, user } = response.data;
       localStorage.setItem('authToken', token);
       localStorage.setItem('authUser', JSON.stringify(user));
@@ -36,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       // Ajout d'une animation de succès avant la redirection
       document.querySelector('.login-form')?.classList.add('success-animation');
-      
+
       setTimeout(() => {
         if (user.role === 'admin') {
           navigate('/dashboard', { replace: true });
@@ -47,22 +48,34 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       }, 1000);
 
     } catch (error) {
-      if(error instanceof Error){
-      console.error('Erreur de connexion:', error.message);
-      setMessage(error.message || 'Erreur lors de la connexion.');
-      
-      // Animation d'erreur
-      const form = document.querySelector('.login-form');
-      form?.classList.add('error-shake');
-      setTimeout(() => form?.classList.remove('error-shake'), 500);
-    }} finally {
+      if (error instanceof Error) {
+        console.error('Erreur de connexion:', error.message);
+        setMessage(error.message || 'Erreur lors de la connexion.');
+
+        // Animation d'erreur
+        const form = document.querySelector('.login-form');
+        form?.classList.add('error-shake');
+        setTimeout(() => form?.classList.remove('error-shake'), 500);
+      }
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4 login-container opacity-0 translate-y-5">
+    <div >
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:shadow-xl login-form">
+       
+          <button
+            className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
+            onClick={()=>{setShowLoginModal(false)}}
+            style={{
+              left:400,
+              position:'absolute',
+              fontSize:20,
+              fontWeight:'bold',
+            }}
+          >X</button>
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,7 +85,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <h2 className="text-3xl font-bold text-indigo-700 mb-2">Connexion</h2>
           <p className="text-gray-500">Accédez à votre espace personnel</p>
         </div>
-        
+
         {message && (
           <div className={`mt-4 p-3 rounded-lg text-center transition-all duration-300 ${message.includes('réussie') ? 'bg-green-100 text-green-700 animate-pulse' : 'bg-red-100 text-red-700'}`}>
             {message}
@@ -101,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               />
             </div>
           </div>
-          
+
           <div className="relative">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Mot de passe
@@ -142,14 +155,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </button>
           </div>
         </form>
-        
+
         <div className="mt-8">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center">
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowDemo(!showDemo)}
                 className="px-3 py-1 bg-white text-sm text-gray-500 hover:text-indigo-600 transition-colors duration-200"
@@ -158,7 +171,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </button>
             </div>
           </div>
-          
+
           {showDemo && (
             <div className="mt-4 bg-gray-50 p-4 rounded-lg animate-fade-in">
               <p className="text-sm text-gray-600 mb-2 font-medium">Comptes de démonstration :</p>
