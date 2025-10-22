@@ -90,7 +90,7 @@ const Dashboard: React.FC = () => {
     const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
     const [update, setUpdate] = useState<boolean>(false)
     const [submissionToArchive, setSubmissionToArchive] = useState<Submission[]>([]);
-    const [isLoadingLogout, setIsloadinLogout]=useState<boolean>(false)
+    const [isLoadingLogout, setIsloadinLogout] = useState<boolean>(false)
     const [filtered, setFiltered] = useState<Submission[]>([])
     const [grade, setGrade] = useState<number>();
     // const [comment, setComment] = useState<string>(submissions.evaluation?.comment ?? '');
@@ -143,15 +143,17 @@ const Dashboard: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (response.data.success) {
+            if (response.status==200) {
                 setMessage("Évaluation enregistrée avec succès !");
-                console.log("Evaluation enregistrée ...!")
+                console.log("Evaluation enregistrée ...!",response.data)
                 // Mettre à jour la soumission avec l'évaluation
                 setSubmissions(prev => prev.map(sub =>
                     sub.id === submissionId
                         ? { ...sub, ...response.data.evaluation }
                         : sub
                 ));
+                console.log("finally "+response.data.evaluation.grade);
+                
             }
 
             // Timer pour effacer le message après 2 secondes
@@ -268,7 +270,7 @@ const Dashboard: React.FC = () => {
             if (response.data.success) {
                 // Mettre à jour l'état avec les soumissions récupérées
                 setSubmissions(response.data.submissions);
-                console.log(response.data.submissions);
+                console.log("submissions ",response.data.submissions);
             } else {
                 console.error('Erreur lors de la récupération des soumissions:', response.data.message);
                 // Optionnel : afficher un message d'erreur à l'utilisateur
@@ -616,7 +618,7 @@ const Dashboard: React.FC = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download',filename ); // ou le nom que tu veux donner au fichier
+            link.setAttribute('download', filename); // ou le nom que tu veux donner au fichier
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -724,8 +726,8 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        handleDownload(submission.file_path,submission.project?.title)
-                                        console.log(submission.id, submission.file_path,submission.project?.title)
+                                        handleDownload(submission.file_path, submission.project?.title)
+                                        console.log(submission.id, submission.file_path, submission.project?.title)
                                     }}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
                                 >
@@ -812,8 +814,11 @@ const Dashboard: React.FC = () => {
                             : 'hover:bg-indigo-400 hover:shadow-lg'
                             }`}
                     >
-                        <span className="text-2xl">📂</span>
+                        <span className="text-2xl">🔼</span>
                         {/* <ion-icon name="archive"></ion-icon> */}
+                        {/* <a href="https://www.flaticon.com/free-icons/open-folder" title="open folder icons"></a> */}
+                        {/* <a href="https://www.flaticon.com/free-icons/open-folder" title="open folder icons"></a> */}
+                        
                         <span className="font-semibold">Projets</span>
                     </button>
 
@@ -824,7 +829,7 @@ const Dashboard: React.FC = () => {
                             : 'hover:bg-indigo-400 hover:shadow-lg'
                             }`}
                     >
-                        <span className="text-2xl">🔼 </span>
+                        <span className="text-2xl">📂 </span>
                         <span className="font-semibold">Dépôts</span>
 
                     </button>
@@ -859,14 +864,22 @@ const Dashboard: React.FC = () => {
                     <button
                         onClick={handleLogout}
                         disabled={isLoadingLogout}
-                        className="w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 hover:bg-red-400 hover:shadow-lg transform hover:scale-105"
+                        className="w-auto text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 hover:bg-red-400 hover:shadow-lg transform hover:scale-105"
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                         </svg>
                         {/* <span className="text-2xl">🔒</span> */}
-                        <span className="font-semibold">{!isLoadingLogout?'Déconnexion':'Déconnexion...'}</span>
-                       
+                        <span className="font-semibold">{!isLoadingLogout ? 'Déconnexion' : (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+            
+                            </>
+                        )}</span>
+
                     </button>
                 </div>
             </aside>

@@ -63,15 +63,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, setShowLoginModal }) => {
   };
 
   return (
-    <div >
+    <div className="min-h-screen from-indigo-50 to-purple-50 flex items-center justify-center p-4 login-container opacity-0 translate-y-5"  >
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:shadow-xl login-form">
        
           <button
             className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
             onClick={()=>{setShowLoginModal(false)}}
             style={{
-              left:400,
-              position:'absolute',
+              // left:400,
+              position:'relative',
               fontSize:20,
               fontWeight:'bold',
             }}

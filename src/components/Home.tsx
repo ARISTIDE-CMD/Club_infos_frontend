@@ -349,10 +349,8 @@ const Home: React.FC = () => {
 
         {/* Login Modal */}
         {showLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn "
-          style={{
-            width:'100%'
-          }}
+          <div className="fixed inset-0 z-50 flex  justify-center bg-black/70 backdrop-blur-sm animate-fadeIn w-auto"
+
           >
             {/* <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md transform scale-95 animate-slideUp">
               <div className="flex justify-between items-center mb-6">
