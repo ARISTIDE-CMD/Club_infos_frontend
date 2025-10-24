@@ -5,19 +5,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import './Dash.css'
 import EvaluationForm from "./SubmissionForm";
-import StudentChart from "./Performance";
-// import Graphe from "./Performance";
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from "recharts";
-import { BarChart, Bar, } from "recharts";
+import AdminForum from "./AdminForum";
 import MeritChart from "./Performance";
 
 // Interfaces pour la structure des données
@@ -969,15 +957,8 @@ const Dashboard: React.FC = () => {
                                 </svg>
                             )
                         },
-                        {
-                            key: 'archive', label: 'Archives', icon: (
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                                </svg>
-                            )
-                        },
-                        {
-                            key: 'Forum', label: 'Forum', icon: (
+                          {
+                            key: 'forum', label: 'Forum', icon: (
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path
                                         strokeLinecap="round"
@@ -988,6 +969,14 @@ const Dashboard: React.FC = () => {
                                 </svg>
                             )
                         },
+                        {
+                            key: 'archive', label: 'Archives', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                </svg>
+                            )
+                        },
+            
                     ].map(({ key, label, icon }) => (
                         <button
                             key={key}
@@ -1476,12 +1465,13 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
                 {/* vue de performance des étudiants */}
-                {view === 'performance' && !loading && (
+                {view === 'performance'&& (
                     <MeritChart />
+                    //    <AdminForum />
                 )}
 
-                {view === 'forum' && !loading && (
-                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-8 py-4 border-t border-indigo-100/50">Cette Fonctionnalités est en cours de développement... !</div>
+                {view === 'forum' && (
+                    <AdminForum />
                 )}
 
                 {/* Modal de confirmation de suppression */}

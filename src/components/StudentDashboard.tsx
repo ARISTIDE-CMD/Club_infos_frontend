@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import PerformanceChart from './PerformanceChart'; // Importez le nouveau composant de graphique
+// import ProjectChat from './ProjectChat';
 
 // --- INTERFACES CORRIGÉES ---
 interface Project {
@@ -17,7 +18,7 @@ interface Project {
       id: number;
       // La note est stockée comme string dans le backend, mais on la veut comme string ici pour éviter le parsing multiple.
       // Le composant de graphique s'occupera du parseFloat.
-      grade: string; 
+      grade: string;
       comment: string;
       created_at: string;
     }
@@ -30,7 +31,7 @@ interface StudentUser {
   email: string;
   role: string;
   // Ajout de student_id qui est utilisé dans le localStorage pour l'auto-identification
-  student_id?: string; 
+  student_id?: string;
 }
 
 interface Student {
@@ -51,6 +52,11 @@ const StudentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Chat state : messages par projet
+  const [chatMessages, setChatMessages] = useState<{ [projectId: number]: string[] }>({});
+  const [chatInput, setChatInput] = useState<{ [projectId: number]: string }>({});
+
+
   // State for project submission form
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -58,11 +64,78 @@ const StudentDashboard: React.FC = () => {
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [loadingLogOut, setLoadingLogOut] = useState<boolean>(false);
 
+  //ouverture et fermeture de la discussion
+  const [openChats, setOpenChats] = useState<Record<number, boolean>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<number, number>>({});
+  const [loadingSend, setLoadingSend]=useState<boolean>(false)
+
+
   /**
    * Fonction de récupération des données de l'étudiant. 
    * Utilisée dans useEffect et après une soumission.
    * Utilisation de useCallback pour une meilleure gestion des dépendances dans useEffect.
    */
+
+  // Récupérer messages
+  const fetchMessages = async (projectId: number) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const res = await api.get(`/projects/${projectId}/messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // On stocke directement tous les messages du projet
+      setChatMessages(prev => ({
+        ...prev,
+        [projectId]: res.data, // chaque item contient project_id, message, user_name, created_at
+      }));
+
+      console.log("Messages du projet", projectId, res.data);
+    } catch (error) {
+      console.error("Erreur lors du chargement des messages :", error);
+    }
+  };
+
+
+  // Envoyer message
+  const handleChatSend = async (projectId: number) => {
+    if (!chatInput[projectId]) return;
+    setLoadingSend(true)
+  const token = localStorage.getItem('authToken');
+
+  const res = await api.post(
+    '/projects/messages',
+    {
+      project_id: projectId,
+      message: chatInput[projectId],
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  // Ajouter le message dans la bonne structure
+  setChatMessages(prev => ({
+    ...prev,
+    [projectId]: {
+      ...(prev[projectId] || { messages: [], students: [] }),
+      messages: [
+        ...(prev[projectId]?.messages || []),
+        res.data.message, // le nouveau message
+      ],
+    },
+  }));
+
+  setChatInput(prev => ({ ...prev, [projectId]: '' }));
+  fetchMessages(projectId); // rafraîchir les messages
+  setLoadingSend(false)
+};
+
+  
+
+
   const fetchStudentData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -79,6 +152,7 @@ const StudentDashboard: React.FC = () => {
       let studentToFetchId: string | undefined = paramStudentId;
       if (!paramStudentId) {
         const user = localStorage.getItem('authUser');
+
         if (user) {
           try {
             const parsedUser: StudentUser = JSON.parse(user);
@@ -114,18 +188,20 @@ const StudentDashboard: React.FC = () => {
       });
 
       setStudent(response.data.student);
+      // --- Récupérer les messages pour chaque projet ---
+      response.data.student.projects.forEach(p => fetchMessages(p.id));
 
     } catch (err: any) {
       console.error("Erreur lors de la récupération des données:", err.message || err.toString());
       // Ajout d'une gestion d'erreur 404/403 plus spécifique
       const status = err.response?.status;
       if (status === 401 || status === 403) {
-         setError('Session expirée ou non autorisée. Veuillez vous reconnecter.');
-         localStorage.removeItem('authToken');
-         localStorage.removeItem('authUser');
-         navigate('/', { replace: true });
+        setError('Session expirée ou non autorisée. Veuillez vous reconnecter.');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+        navigate('/', { replace: true });
       } else {
-         setError('Échec du chargement des informations de l\'étudiant.');
+        setError('Échec du chargement des informations de l\'étudiant.');
       }
     } finally {
       setLoading(false);
@@ -134,7 +210,30 @@ const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchStudentData();
+    // fetchMessages()
   }, [fetchStudentData]); // Dépendance à fetchStudentData (encapsulée dans useCallback)
+
+  useEffect(() => {
+    Object.keys(openChats).forEach(id => {
+      const projectId = Number(id);
+      if (openChats[projectId]) {
+        setUnreadCounts(prev => ({ ...prev, [projectId]: 0 }));
+      }
+    });
+  }, [openChats]);
+
+  useEffect(() => {
+    Object.keys(chatMessages).forEach(id => {
+      const projectId = Number(id);
+      // si un nouveau message arrive et que le chat est fermé
+      if (!openChats[projectId]) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [projectId]: (prev[projectId] || 0) + 1,
+        }));
+      }
+    });
+  }, [chatMessages]);
 
   // ... (handleLogout inchangé)
 
@@ -207,14 +306,14 @@ const StudentDashboard: React.FC = () => {
       });
 
       setUploadMessage("Projet soumis avec succès ! Les données vont se rafraîchir.");
-      
+
       // On rafraîchit immédiatement après la soumission réussie
       await fetchStudentData();
-      
+
       // Nettoyage des states de formulaire après rafraîchissement
       setSelectedFile(null);
       setSelectedProjectId(null);
-      
+
       setTimeout(() => {
         setUploadMessage(null);
       }, 5000);
@@ -233,9 +332,9 @@ const StudentDashboard: React.FC = () => {
   // --- LOGIQUE DE CALCUL DE LA MOYENNE ET DES DONNÉES DU GRAPHIQUE OPTIMISÉE ---
   const getStudentPerformance = () => {
     // Filtrer les projets qui ont une soumission ET une évaluation avec une note définie
-    const gradedProjects = student?.projects.filter(p => 
-        p.submission?.evaluation?.grade != null && p.submission.evaluation.grade !== "") || [];
-    
+    const gradedProjects = student?.projects.filter(p =>
+      p.submission?.evaluation?.grade != null && p.submission.evaluation.grade !== "") || [];
+
     if (gradedProjects.length === 0) {
       return { averageGrade: "N/A", projectsData: [] };
     }
@@ -243,13 +342,13 @@ const StudentDashboard: React.FC = () => {
     let totalGrade = 0;
     const projectsData = gradedProjects.map(p => {
       // Utilisation de Number() pour parser la note string en nombre, ou 0 si le parsing échoue (même si l'on filtre déjà)
-      const grade = Number(p.submission!.evaluation!.grade); 
+      const grade = Number(p.submission!.evaluation!.grade);
       totalGrade += grade;
       return {
         title: p.title,
         grade: grade,
         // Assurez-vous que l'objet date est triable par le composant de graphique
-        submissionDate: p.submission!.created_at 
+        submissionDate: p.submission!.created_at
       };
     });
 
@@ -309,8 +408,8 @@ const StudentDashboard: React.FC = () => {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-    hour:'2-digit',
-    minute:'numeric'
+    hour: '2-digit',
+    minute: 'numeric'
   };
   const formattedDate = new Intl.DateTimeFormat('fr-FR', options).format(date);
 
@@ -322,106 +421,106 @@ const StudentDashboard: React.FC = () => {
         {/* --------------------------------------------------------------------------------
     HEADER : Tableau de bord étudiant
     -------------------------------------------------------------------------------- */}
-<div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 mb-10">
-    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 mb-10">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
 
-        {/* 1. Titre et Informations Principales */}
-        <div className="flex-1 min-w-0">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-1">
+            {/* 1. Titre et Informations Principales */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-1">
                 Tableau de bord étudiant 🎓
-            </h1>
-            <p className="text-xl text-gray-600 truncate">
+              </h1>
+              <p className="text-xl text-gray-600 truncate">
                 Bienvenue, <span className="font-extrabold text-indigo-700">{student.user.name}</span>
-            </p>
-        </div>
+              </p>
+            </div>
 
-        {/* 2. Bouton de Déconnexion (Alignement vertical au centre) */}
-        <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-base transition-colors duration-300 hover:bg-red-700 shadow-lg shrink-0"
-            disabled={loadingLogOut}
-        >
-            <svg 
-                className={`h-5 w-5 ${loadingLogOut ? 'animate-spin' : ''}`} 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+            {/* 2. Bouton de Déconnexion (Alignement vertical au centre) */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-base transition-colors duration-300 hover:bg-red-700 shadow-lg shrink-0"
+              disabled={loadingLogOut}
+            >
+              <svg
+                className={`h-5 w-5 ${loadingLogOut ? 'animate-spin' : ''}`}
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
                 aria-hidden="true" // Amélioration accessibilité
-            >
+              >
                 {loadingLogOut ? (
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 )}
-            </svg>
-            {loadingLogOut ? "Déconnexion..." : "Déconnexion"}
-        </button>
-    </div>
+              </svg>
+              {loadingLogOut ? "Déconnexion..." : "Déconnexion"}
+            </button>
+          </div>
 
-    {/* --------------------------------------------------------------------------
+          {/* --------------------------------------------------------------------------
         3. Carte d'informations (Métrique)
         Utilisation d'une grille réactive pour un affichage propre
         -------------------------------------------------------------------------- */}
-    <dl className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+          <dl className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
 
-        {/* A. Matricule (Clé d'identification) */}
-        <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
-            <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+            {/* A. Matricule (Clé d'identification) */}
+            <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
+              <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
                 <span className="h-4 w-4 text-indigo-500">#</span> Matricule
-            </dt>
-            <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
+              </dt>
+              <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
                 {student.student_id}
-            </dd>
-        </div>
+              </dd>
+            </div>
 
-        {/* B. Classe (Groupe) */}
-        <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
-            <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+            {/* B. Classe (Groupe) */}
+            <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
+              <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
                 <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-3H17v3zM6 18H2v-3h4v3zm8 0h-4v-3h4v3zm-4 3v-3H6v3h4zM8 9H4V6h4v3zm10 0h-4V6h4v3zm-4 3v-3h4v3h-4zM8 15h4v-3H8v3z" /></svg>
                 Classe
-            </dt>
-            <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
+              </dt>
+              <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
                 {student.class_group}
-            </dd>
-        </div>
+              </dd>
+            </div>
 
-        {/* C. Email (Informations de contact) */}
-        <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-gray-200 bg-gray-50">
-            <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+            {/* C. Email (Informations de contact) */}
+            <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-gray-200 bg-gray-50">
+              <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
                 <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 7a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v8z" /></svg>
                 Email
-            </dt>
-            <dd className="mt-1 text-lg text-gray-900 truncate">
+              </dt>
+              <dd className="mt-1 text-lg text-gray-900 truncate">
                 {student.user.email}
-            </dd>
-        </div>
+              </dd>
+            </div>
 
-        {/* D. MOYENNE GENERALE (Mise en évidence) */}
-        <div className="col-span-2 lg:col-span-1 p-3 rounded-xl border-4 border-yellow-300 bg-yellow-50 order-first lg:order-none">
-            <dt className="text-sm font-semibold text-yellow-800 flex items-center gap-2">
+            {/* D. MOYENNE GENERALE (Mise en évidence) */}
+            <div className="col-span-2 lg:col-span-1 p-3 rounded-xl border-4 border-yellow-300 bg-yellow-50 order-first lg:order-none">
+              <dt className="text-sm font-semibold text-yellow-800 flex items-center gap-2">
                 <svg className="h-5 w-5 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3 .895 3 2s-1.343 2-3 2v2m0-4c-1.657 0-3 .895-3 2s1.343 2 3 2v2m-6-2h12M4 12h16" /></svg>
                 MOYENNE GÉNÉRALE
-            </dt>
-            <dd className="mt-1 text-3xl font-extrabold text-yellow-900">
+              </dt>
+              <dd className="mt-1 text-3xl font-extrabold text-yellow-900">
                 {averageGrade} / 20
-            </dd>
-        </div>
+              </dd>
+            </div>
 
-        {/* E. Inscrit le (Date) */}
-        <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-green-200 bg-green-50">
-            <dt className="text-xs font-medium text-green-600 flex items-center gap-1">
+            {/* E. Inscrit le (Date) */}
+            <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-green-200 bg-green-50">
+              <dt className="text-xs font-medium text-green-600 flex items-center gap-1">
                 <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-4 4V3M3 8h18M5 12h14M5 16h14M5 20h14" /></svg>
                 Inscription
-            </dt>
-            <dd className="mt-1 text-lg font-medium text-green-900">
+              </dt>
+              <dd className="mt-1 text-lg font-medium text-green-900">
                 {formattedDate.split(',')[1]?.trim() || formattedDate}
-            </dd>
+              </dd>
+            </div>
+          </dl>
         </div>
-    </dl>
-</div>
 
-    
+
 
         {/* Contenu principal */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -435,8 +534,8 @@ const StudentDashboard: React.FC = () => {
 
             {uploadMessage && (
               <div className={`mb-5 p-4 rounded-lg text-sm font-medium ${uploadMessage.includes('succès')
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
                 }`}>
                 {uploadMessage}
               </div>
@@ -482,8 +581,8 @@ const StudentDashboard: React.FC = () => {
                 type="submit"
                 disabled={uploading || !selectedProjectId || !selectedFile}
                 className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform shadow-md flex items-center justify-center gap-2 ${uploading || !selectedProjectId || !selectedFile
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
                   }`}
               >
                 {uploading ? (
@@ -532,20 +631,18 @@ const StudentDashboard: React.FC = () => {
                       {/* Statuts */}
                       <div className="flex flex-col items-end gap-1.5 min-w-[120px]">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            project.submission
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${project.submission
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
                             }`}
                         >
                           {project.submission ? "Soumis ✅" : "Pas soumis ❌"}
                         </span>
 
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            project.submission?.evaluation
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-600"
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${project.submission?.evaluation
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
                             }`}
                         >
                           {project.submission?.evaluation ? "Évalué 📊" : "En attente ⏳"}
@@ -560,16 +657,14 @@ const StudentDashboard: React.FC = () => {
                       <div className="space-y-2">
                         <dl>
                           <dt className="font-semibold text-gray-800">🎯 Note :</dt>
-                          <dd className={`text-xl font-extrabold ${
-                              project.submission?.evaluation?.grade ? "text-indigo-600" : "text-gray-400"
+                          <dd className={`text-xl font-extrabold ${project.submission?.evaluation?.grade ? "text-indigo-600" : "text-gray-400"
                             }`}>
                             {project.submission?.evaluation?.grade !== undefined ? `${project.submission.evaluation.grade}/20` : "Non noté"}
                           </dd>
                         </dl>
                         <dl>
                           <dt className="font-semibold text-gray-800">💬 Commentaire :</dt>
-                          <dd className={`mt-0.5 text-sm ${
-                              project.submission?.evaluation?.comment ? "text-gray-700 italic" : "text-gray-400"
+                          <dd className={`mt-0.5 text-sm ${project.submission?.evaluation?.comment ? "text-gray-700 italic" : "text-gray-400"
                             }`}>
                             {project.submission?.evaluation?.comment || "Aucun commentaire"}
                           </dd>
@@ -582,7 +677,7 @@ const StudentDashboard: React.FC = () => {
                           <dt className="font-semibold text-gray-600">📤 Date de soumission :</dt>
                           <dd className="text-gray-600 font-medium">
                             {project.submission?.created_at
-                              ? new Date(project.submission.created_at).toLocaleString("fr-FR", { day: '2-digit', month: 'short', year: 'numeric', hour:'2-digit', minute:'2-digit'})
+                              ? new Date(project.submission.created_at).toLocaleString("fr-FR", { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                               : "N/A"}
                           </dd>
                         </dl>
@@ -596,6 +691,127 @@ const StudentDashboard: React.FC = () => {
                         </dl>
                       </div>
                     </div>
+                    {/* 💬 Chat du projet */}
+                    <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 mt-6">
+  {/* --- En-tête du bloc --- */}
+  <div
+    className="flex justify-between items-center cursor-pointer select-none"
+    onClick={() =>
+      setOpenChats(prev => ({ ...prev, [project.id]: !prev[project.id] }))
+    }
+    
+  >
+    <h3 className="text-lg font-bold mb-3">💬 Chat du projet</h3>
+
+    {/* Indicateur de messages non lus */}
+    {/* {unreadCounts[project.id] > 0 && !openChats[project.id] && (
+      <span className="bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+        {unreadCounts[project.id]}
+      </span>
+    )} */}
+    <button 
+    className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-600 transition"
+    onClick={(e)=>{
+      e.stopPropagation();
+      fetchMessages(project.id)
+    }}
+    >Refresh</button>
+    <div style={{width:10, height:10, borderRadius:50, backgroundColor:'green', opacity:.6}}>
+      
+    </div>
+  </div>
+
+  {/* --- Contenu du chat (repliable) --- */}
+  {openChats[project.id] && (
+    <>
+      {/* Liste des étudiants du projet */}
+      {chatMessages[project.id]?.students?.length > 0 && (
+        <div
+        >
+        <div className="mb-3 border border-gray-200 bg-gray-50 p-3 rounded-lg">
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">👥 Membres du projet :</h4>
+          <ul className="text-sm text-gray-600 flex flex-wrap gap-2">
+            {chatMessages[project.id].students.map((stdent, i) => (
+              <li
+                key={i}
+                className="bg-gray-200 px-2 py-1 rounded-full text-xs font-medium text-gray-800"
+              >
+                {stdent.user_name==student.user.name?"Vous":stdent.user_name}
+              </li>
+            ))}
+          </ul>
+  
+        </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div className="max-h-60 overflow-y-auto border p-3 rounded-lg bg-gray-50 mb-3 space-y-2">
+        {(chatMessages[project.id]?.messages || []).map((msg, index) => {
+          const currentUser = student.user.name;
+          const isOwnMessage = msg.user_name === currentUser;
+
+          return (
+            <div
+              key={index}
+              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[75%] p-2 rounded-lg shadow-sm ${
+                  isOwnMessage
+                    ? 'bg-indigo-600 text-white rounded-br-none'
+                    : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                }`}
+              >
+                {!isOwnMessage && (
+                  <div className="text-xs font-semibold text-gray-600 mb-1">
+                    {msg.user_name}
+                  </div>
+                )}
+                <div className="text-sm">{msg.message}</div>
+                <div
+                  className={`text-[10px] mt-1 ${
+                    isOwnMessage
+                      ? 'text-indigo-200 text-right'
+                      : 'text-gray-500 text-left'
+                  }`}
+                >
+                  {new Date(msg.created_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Champ d’envoi */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={chatInput[project.id] || ''}
+          onChange={e =>
+            setChatInput(prev => ({ ...prev, [project.id]: e.target.value }))
+          }
+          placeholder="Écrire un message..."
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          onClick={() => handleChatSend(project.id)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+          disabled={loadingSend}
+          style={{
+            opacity:loadingSend?.5:1
+          }}
+        >
+         {loadingSend? "Envoies..":"Envoyer"}
+        </button>
+      </div>
+    </>
+  )}
+</div>
                   </div>
                 ))}
               </div>
@@ -607,7 +823,9 @@ const StudentDashboard: React.FC = () => {
             )}
           </div>
         </div>
-                {/* GRAPHIQUE - Nouvelle Section */}
+        {/* Chat pour étudiant */}
+        {/* <ProjectChat projectId={0}/> */}
+        {/* GRAPHIQUE - Nouvelle Section */}
         <div className="mt-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             📈 Aperçu de la Performance
