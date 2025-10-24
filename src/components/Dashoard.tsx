@@ -5,7 +5,20 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import './Dash.css'
 import EvaluationForm from "./SubmissionForm";
-
+import StudentChart from "./Performance";
+// import Graphe from "./Performance";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+} from "recharts";
+import { BarChart, Bar, } from "recharts";
+import MeritChart from "./Performance";
 
 // Interfaces pour la structure des données
 interface Student {
@@ -67,16 +80,20 @@ interface SubmissionItemProps {
     submissionCreatedAt: Date;
     durationDays: number;
     durationHours: number;
+    durationsMinut: number;
 }
 
 
 const Dashboard: React.FC = () => {
+    const [dataSet, setDataSet] = useState<any[]>([{}])
     const navigate = useNavigate();
     const [students, setStudents] = useState<Student[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [archive, setArchive] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
+    const [loadingProject, setLoadingProjet] = useState<boolean>(true)
+    const [loadingSoumission, setLoadingSoumission] = useState<boolean>(false)
     const [message, setMessage] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isCreateStudentModalOpen, setIsCreateStudentModalOpen] = useState(false)
@@ -103,6 +120,22 @@ const Dashboard: React.FC = () => {
         class_group: "L1 Info",
     });
 
+    const [chartData, setChartData] = useState<any[]>([]);
+    const [loadingChart, setLoadingChart] = useState(true);
+    const [error, setError] = useState("");
+
+    const data = [
+        { name: "Jan", valeur: 400 },
+        { name: "Fév", valeur: 300 },
+        { name: "Mar", valeur: 500 },
+        { name: "Avr", valeur: 200 },
+        { name: "Mai", valeur: 700 },
+    ];
+    // const filterData=dataSet.filter((value,_)=>{
+    //     value.submission.
+    // })
+
+
     // const [nom,setNom]=useState<string>('')
     // const [matricule,setMatricule]=useState<string>('')
     const [formDataProject, setFormDataProject] = useState({
@@ -111,10 +144,56 @@ const Dashboard: React.FC = () => {
         student_ids: [] as number[],
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [view, setView] = useState<'students' | 'projects' | 'results' | 'archive'>('students');
+    const [view, setView] = useState<'students' | 'projects' | 'results' | 'archive' | 'performance' | 'forum'>('students');
+    const [download, setDownload] = useState<boolean>(false);
     // États pour gérer l'évaluation
     const [evaluations, setEvaluations] = useState({});
     const [evaluationLoading, setEvaluationLoading] = useState(false);
+
+
+    // Fonction pour charger le graphe des étudiants depuis l'API
+    const fetchChartData = async () => {
+        try {
+            const token = localStorage.getItem("authToken");
+            if (!token) {
+                setError("Non autorisé. Veuillez vous connecter.");
+                setLoading(false);
+                return;
+            }
+
+            // 🔸 Récupération des données
+            const response = await api.get("/students", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const students = response.data.students || [];
+
+            // 🔸 Transformation des données pour le graphe
+            const formattedData: React.SetStateAction<any[]> = [];
+
+            students.forEach((student) => {
+                student.projects?.forEach((project) => {
+                    const evaluation = project.submission?.evaluation;
+                    if (evaluation) {
+                        formattedData.push({
+                            etudiant: `${student.first_name} ${student.last_name}`,
+                            projet: project.title,
+                            note: parseFloat(evaluation.grade),
+                        });
+                    }
+                });
+            });
+
+            setChartData(formattedData);
+            console.log("✅ Données du graphe :", formattedData);
+        } catch (err) {
+            console.error("Erreur lors du chargement du graphe :", err);
+            setError("Erreur lors du chargement du graphe.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     // Fonction pour gérer l'évaluation d'un projet
     const handleEvaluation = async (submissionId: number, grade: number, comment: string) => {
@@ -143,17 +222,17 @@ const Dashboard: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (response.status==200) {
+            if (response.status == 200) {
                 setMessage("Évaluation enregistrée avec succès !");
-                console.log("Evaluation enregistrée ...!",response.data)
+                console.log("Evaluation enregistrée ...!", response.data)
                 // Mettre à jour la soumission avec l'évaluation
                 setSubmissions(prev => prev.map(sub =>
                     sub.id === submissionId
                         ? { ...sub, ...response.data.evaluation }
                         : sub
                 ));
-                console.log("finally "+response.data.evaluation.grade);
-                
+                console.log("finally " + response.data.evaluation.grade);
+
             }
 
             // Timer pour effacer le message après 2 secondes
@@ -180,6 +259,7 @@ const Dashboard: React.FC = () => {
             }, 1000);
         } finally {
             setEvaluationLoading(false);
+            fetchSubmissions()
         }
     };
     const fetchStudents = async () => {
@@ -195,13 +275,17 @@ const Dashboard: React.FC = () => {
                         clearInterval(intervall)
                     }
                 }, 1000)
-                setLoading(false);
+                // setLoading(false);
                 return;
             }
             const response = await api.get("/students", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setStudents(response.data.students);
+            console.log("Liste des étudiants ", response.data.students);
+            console.log("Liste des projets ", response.data.students[0].projects);
+            setDataSet(response.data.students[0].projects)
+
         } catch (error) {
             console.error("Erreur lors du chargement des étudiants:", error);
             setMessage("Erreur lors du chargement des étudiants.");
@@ -233,7 +317,7 @@ const Dashboard: React.FC = () => {
                         clearInterval(intervall)
                     }
                 }, 1000)
-                setLoading(false);
+                // setLoading(false);
                 return;
             }
             const response = await api.get("/projects", {
@@ -257,6 +341,9 @@ const Dashboard: React.FC = () => {
                 }
             }, 1000)
             setProjects([]);
+        } finally {
+            setLoading(false)
+            setLoadingProjet(false)
         }
     };
     const fetchSubmissions = async () => {
@@ -270,7 +357,7 @@ const Dashboard: React.FC = () => {
             if (response.data.success) {
                 // Mettre à jour l'état avec les soumissions récupérées
                 setSubmissions(response.data.submissions);
-                console.log("submissions ",response.data.submissions);
+                console.log("submissions ", response.data.submissions);
             } else {
                 console.error('Erreur lors de la récupération des soumissions:', response.data.message);
                 // Optionnel : afficher un message d'erreur à l'utilisateur
@@ -280,7 +367,8 @@ const Dashboard: React.FC = () => {
             setSubmissions([]);
             // Gestion des erreurs (afficher un message, etc.)
         } finally {
-            setLoading(false);
+            // setLoading(false);
+            setLoadingSoumission(false);
         }
     };
     const archivage = (id) => {
@@ -303,6 +391,8 @@ const Dashboard: React.FC = () => {
             fetchSubmissions();
         else if (view === 'projects')
             fetchProjects();
+        // else if (view === 'performance')
+        //     fetchChartData();
     }, [view]);
 
     const handleLogout = async () => {
@@ -606,6 +696,7 @@ const Dashboard: React.FC = () => {
         }
     };
     const handleDownload = async (filePath: string, title: string) => {
+        setDownload(true)
         try {
             const token = localStorage.getItem('authToken');
 
@@ -625,6 +716,8 @@ const Dashboard: React.FC = () => {
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Erreur de téléchargement:', error);
+        } finally {
+            setDownload(false)
         }
     };
 
@@ -634,57 +727,89 @@ const Dashboard: React.FC = () => {
         student.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.class_group.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const SubmissionItem: React.FC<SubmissionItemProps> = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours }) => {
+    const SubmissionItem: React.FC<SubmissionItemProps> = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours, durationsMinut }) => {
         const [isExpanded, setIsExpanded] = useState(false);
 
         return (
             <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-3xl group">
                 {/* En-tête avec fond dégradé - CLICKABLE */}
                 <div
-                    className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 border-b border-gray-100 cursor-pointer"
+                    // Suppression du dégradé et utilisation d'un hover très léger
+                    className="bg-white p-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
-                    <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                    <div className="flex justify-between items-start gap-4">
+
+                        {/* TITRE ET DESCRIPTION */}
+                        <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3">
-                                <span className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
-                                    ➤
-                                </span>
-                                <h4 className="text-xl font-bold text-gray-800 group-hover:text-purple-700 transition-colors duration-200">
+                                {/* Icône d'expansion remplacée par un SVG standard */}
+                                <svg
+                                    className={`w-4 h-4 text-gray-500 transform transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                >
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+
+                                <h4 className="text-xl font-bold text-gray-800 truncate">
                                     {submission.project?.title || 'Projet sans titre'}
                                 </h4>
                             </div>
-                            <p className="text-gray-600 mt-1 ml-6">{submission.project?.description || 'Aucune description'}</p>
+
+                            <p className="text-gray-600 mt-1 ml-7 text-sm truncate">{submission.project?.description || 'Aucune description'}</p>
                         </div>
-                        {submission.grade && (
-                            <span className={`px-4 py-2 rounded-full text-sm font-bold ${submission.grade >= 15 ? 'bg-green-100 text-green-800' :
-                                submission.grade >= 10 ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                }`}>
-                                {submission.grade}/20
-                            </span>
+
+                        {/* NOTE (Reste colorée pour l'information sémantique, mais la palette est simplifiée) */}
+                        {submission.evaluation?.grade !== undefined && ( // Utiliser !== undefined pour inclure la note 0
+                            <div className="flex-shrink-0 flex items-center">
+                                <span className={`px-4 py-2 rounded-full text-sm font-bold shadow-sm ${submission.evaluation.grade >= 15 ? 'bg-green-50 text-green-700' :
+                                    submission.evaluation.grade >= 10 ? 'bg-yellow-50 text-yellow-700' :
+                                        'bg-red-50 text-red-700'
+                                    }`}>
+                                    {submission.evaluation?.grade}/20
+                                </span>
+                            </div>
                         )}
                     </div>
 
-                    {/* Informations résumées */}
-                    <div className="mt-3 ml-6 flex flex-wrap gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                            <span>👤</span>
-                            <span>{submission.student?.first_name} {submission.student?.last_name}</span>
+                    {/* INFORMATIONS RÉSUMÉES & BOUTON D'ACTION */}
+                    <div className="mt-4 ml-7 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600 border-t border-gray-100 pt-3">
+
+                        {/* Bloc d'informations */}
+                        <div className='flex flex-wrap gap-x-6 gap-y-2'>
+                            {/* Étudiant */}
+                            <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <span className='font-medium text-gray-800'>{submission.student?.first_name} {submission.student?.last_name}</span>
+                            </div>
+
+                            {/* Date de Soumission */}
+                            <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span className='text-gray-600'>Soumis le <span style={{ fontWeight: 'bold' }}>{submissionCreatedAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span></span>
+                            </div>
+
+                            {/* Délai écoulé */}
+                            <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span className='text-gray-600'>Délai: <span style={{ fontWeight: 'bold' }}>{durationDays > 1 ? durationDays + "j" : ""} {durationHours > 1 ? durationHours + "h" : ''} {durationsMinut}m</span></span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <span>📅</span>
-                            <span>Soumis le {submissionCreatedAt.toLocaleDateString('fr-FR')}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span>⏱️</span>
-                            <span>{durationDays}j {durationHours}h</span>
-                        </div>
+                        {/* Bouton Archiver/Désarchiver */}
                         <button
-                            className="ml-auto px-3 py-1 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors"
-                            onClick={() => archivage(submission.id)}
+                            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${archive
+                                ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                }`}
+                            onClick={(e) => {
+                                e.stopPropagation(); // Empêche l'expansion/rétraction de la ligne
+                                archivage(submission.id);
+                            }}
                         >
-                            {archive ? '📎Désarchiver' : '📎Archiver'}
+                            <span className="flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8M9 17h6"></path></svg>
+                                {archive ? 'Désarchiver' : 'Archiver'}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -713,7 +838,7 @@ const Dashboard: React.FC = () => {
                                     <span>⏱️ </span>
                                     <span className="font-semibold">Durée</span>
                                 </div>
-                                <p className="text-blue-800 font-bold">{durationDays}j {durationHours}h</p>
+                                <p className="text-blue-800 font-bold">{durationDays >= 1 ? durationDays + "j" : ""} {durationHours >= 1 ? durationHours + "h" : ""} {durationsMinut}m </p>
                             </div>
                         </div>
 
@@ -730,9 +855,15 @@ const Dashboard: React.FC = () => {
                                         console.log(submission.id, submission.file_path, submission.project?.title)
                                     }}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                                // disabled={download}
+                                // style={{
+                                //     opacity:download? 0.5:1
+                                // }}
                                 >
                                     <span>⬇️</span>
+                                    {/* {download? "Téléchargement...":"Télécharger le fichier"} */}
                                     Télécharger le fichier
+
                                 </button>
 
                             </div>
@@ -783,103 +914,119 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-100 font-sans">
+        <div className="flex min-h-screen bg-gray-100 font-sans"
+            style={{
+                // overflow
+            }}
+        >
             {/* Sidebar */}
-            <aside className="w-64 bg-indigo-900 text-white flex flex-col p-4 sticky top-0 h-screen overflow-y-auto shadow-2xl">
-                <div className="px-2 py-6 text-2xl font-bold border-b border-indigo-400">
+            <aside className="w-64 bg-gray-800 text-white flex flex-col p-4 sticky top-0 h-screen overflow-y-auto shadow-xl">
+
+                {/* LOGO & TITRE */}
+                <div className="px-2 py-6 text-2xl font-bold border-b border-gray-700/50">
                     <div className="flex items-center gap-3">
-                        <span className="text-3xl">👨‍💻</span>
-                        <span className="bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">
+                        {/* Icône plus professionnelle ou utilisation de SVG/icône de librairie */}
+                        <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l-2 2-4-4 4-4 2 2v13M15 11l4-4 4 4m-4-4v13"></path>
+                        </svg>
+                        <span className="text-white">
                             Club Info
                         </span>
                     </div>
                 </div>
 
-                <div className="flex-1 mt-8 space-y-4">
-                    <button
-                        onClick={() => setView('students')}
-                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'students'
-                            ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
-                            : 'hover:bg-indigo-400 hover:shadow-lg'
-                            }`}
-                    >
-                        <span className="text-2xl">📈 </span>
-                        <span className="font-semibold">Dashboard</span>
-                    </button>
+                {/* NAVIGATION PRINCIPALE */}
+                <div className="flex-1 mt-8 space-y-2">
 
-                    <button
-                        onClick={() => setView('projects')}
-                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'projects'
-                            ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
-                            : 'hover:bg-indigo-400 hover:shadow-lg'
-                            }`}
-                    >
-                        <span className="text-2xl">🔼</span>
-                        {/* <ion-icon name="archive"></ion-icon> */}
-                        {/* <a href="https://www.flaticon.com/free-icons/open-folder" title="open folder icons"></a> */}
-                        {/* <a href="https://www.flaticon.com/free-icons/open-folder" title="open folder icons"></a> */}
-                        
-                        <span className="font-semibold">Projets</span>
-                    </button>
-
-                    <button
-                        onClick={() => setView('results')}
-                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'results'
-                            ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
-                            : 'hover:bg-indigo-400 hover:shadow-lg'
-                            }`}
-                    >
-                        <span className="text-2xl">📂 </span>
-                        <span className="font-semibold">Dépôts</span>
-
-                    </button>
-                    <button
-                        onClick={() => setView('archive')}
-                        className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${view === 'archive'
-                            ? 'bg-white text-indigo-600 shadow-2xl transform scale-105'
-                            : 'hover:bg-indigo-400 hover:shadow-lg'
-                            }`}
-                    >
-                        <span className="text-2xl">💾</span>
-                        <span className="font-semibold">Archives</span>
-                    </button>
-
-                    {/* <button
-            onClick={() => setView('analytics')}
-            className={`w-full text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 ${
-                view === 'analytics' 
-                    ? 'bg-white text-indigo-600 shadow-2xl transform scale-105' 
-                    : 'hover:bg-indigo-400 hover:shadow-lg'
-            }`}
-        >
-            <span className="text-2xl">📊</span>
-            <span className="font-semibold">Analytics</span>
-        </button> */}
+                    {/* Fonction pour le style actif (Active/Hover Style Function) */}
+                    {/* J'utilise une simple bordure latérale et un fond subtil pour le statut actif */}
+                    {[
+                        {
+                            key: 'students', label: 'Dashboard', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-2v2m-4-2v2m-2-6h10a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z"></path>
+                                </svg>
+                            )
+                        },
+                        {
+                            key: 'projects', label: 'Projets', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                            )
+                        },
+                        {
+                            key: 'results', label: 'Dépôts', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6h6m-6 0h-2M18 18a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6h-2m-2 0h-6m6 0h2"></path>
+                                </svg>
+                            )
+                        },
+                        {
+                            key: 'performance', label: 'Performances', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            )
+                        },
+                        {
+                            key: 'archive', label: 'Archives', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                </svg>
+                            )
+                        },
+                        {
+                            key: 'Forum', label: 'Forum', icon: (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"
+                                    />
+                                </svg>
+                            )
+                        },
+                    ].map(({ key, label, icon }) => (
+                        <button
+                            key={key}
+                            onClick={() => setView(key)}
+                            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-4 text-sm font-medium transition-all duration-200 
+                    ${view === key
+                                    // Style actif : Bordure à gauche + fond bleu très léger
+                                    ? 'bg-indigo-900 text-white border-l-4 border-indigo-400'
+                                    // Style normal : Hover subtil
+                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                }`}
+                        >
+                            {icon}
+                            <span className="font-semibold">{label}</span>
+                        </button>
+                    ))}
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-indigo-400">
-                    <div className="px-4 py-3 text-sm text-indigo-200 mb-2">
-                        Connecté en tant qu'admin
+                {/* FOOTER : Statut et Déconnexion */}
+                <div className="mt-auto pt-6 border-t border-gray-700/50">
+
+                    {/* Statut utilisateur */}
+                    <div className="flex items-center gap-3 px-4 py-2 text-sm mb-3">
+                        <span className="h-2 w-2 bg-green-400 rounded-full"></span>
+                        <span className="text-gray-400">Connecté en tant que <span className='font-semibold text-white'>Admin</span></span>
                     </div>
+
+                    {/* Bouton de Déconnexion */}
                     <button
                         onClick={handleLogout}
                         disabled={isLoadingLogout}
-                        className="w-auto text-left px-4 py-4 rounded-xl flex items-center gap-4 transition-all duration-300 hover:bg-red-400 hover:shadow-lg transform hover:scale-105"
+                        className="w-full text-left px-4 py-3 rounded-lg flex items-center gap-4 text-sm font-medium transition-all duration-200 text-red-300 hover:bg-red-700/20 hover:text-red-300"
                     >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        <svg className={`w-5 h-5 ${isLoadingLogout ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
-                        {/* <span className="text-2xl">🔒</span> */}
-                        <span className="font-semibold">{!isLoadingLogout ? 'Déconnexion' : (
-                            <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-            
-                            </>
-                        )}</span>
-
+                        <span className="font-semibold">
+                            {!isLoadingLogout ? 'Déconnexion' : 'Déconnexion...'}
+                        </span>
                     </button>
                 </div>
             </aside>
@@ -897,6 +1044,7 @@ const Dashboard: React.FC = () => {
                             {view === 'students' ? "Gestion des étudiants inscrits" : ""}
                             {view === 'results' ? 'Correction des projets des étudiants' : ''}
                             {view === 'projects' ? 'Gestion des projets de groupe' : ''}
+                            {/* {view == 'forum'? 'Cette fonctionnalité est en cours de développement':''} */}
 
                         </p>
                     </div>
@@ -968,6 +1116,8 @@ const Dashboard: React.FC = () => {
 
                                             const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
                                             const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                            // CORRECTION APPORTÉE : on utilise le modulo sur l'heure (1000 * 60 * 60)
+                                            const durationsMinut = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
                                             return (
                                                 <SubmissionItem
@@ -977,6 +1127,7 @@ const Dashboard: React.FC = () => {
                                                     submissionCreatedAt={submissionCreatedAt}
                                                     durationDays={durationDays}
                                                     durationHours={durationHours}
+                                                    durationsMinut={durationsMinut}
                                                 />
                                             );
                                         })}
@@ -995,7 +1146,7 @@ const Dashboard: React.FC = () => {
                 )}
                 {view === 'results' && (
                     <div>
-                        {loading ? (
+                        {loadingSoumission ? (
                             <div className="flex justify-center items-center py-20">
                                 <div className="text-center">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
@@ -1025,6 +1176,8 @@ const Dashboard: React.FC = () => {
 
                                         const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
                                         const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                        // CORRECTION APPORTÉE : on utilise le modulo sur l'heure (1000 * 60 * 60)
+                                        const durationsMinut = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
                                         return (
                                             <SubmissionItem
@@ -1034,6 +1187,7 @@ const Dashboard: React.FC = () => {
                                                 submissionCreatedAt={submissionCreatedAt}
                                                 durationDays={durationDays}
                                                 durationHours={durationHours}
+                                                durationsMinut={durationsMinut}
                                             />
                                         );
                                     })}
@@ -1054,53 +1208,64 @@ const Dashboard: React.FC = () => {
                 {view === 'students' && !loading && (
                     <>
                         <div className="mb-8">
+                            {/* BARRE DE RECHERCHE : Style minimaliste, centrée sur l'icône SVG */}
                             <div className="relative">
+                                <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                 <input
                                     type="text"
-                                    placeholder="🔍 Rechercher un étudiant par nom, matricule ou classe..."
+                                    placeholder="Rechercher un étudiant par nom, matricule ou classe..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full px-6 py-4 pl-12 border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 text-lg shadow-lg hover:shadow-xl"
+                                    // Simplification des classes: moins d'ombre, plus de focus clair
+                                    className="w-full px-5 py-3 pl-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200 text-base shadow-sm"
                                 />
-                                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
                             </div>
                         </div>
 
-                        <div className="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-3xl">
-                            <div className="p-8 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-100">
+                        <div className="bg-white shadow-lg rounded-xl overflowX-hidden border border-gray-100 transition-shadow duration-300">
+
+                            {/* EN-TÊTE : Couleur de fond unie très claire, pas de dégradé prononcé */}
+                            <div className="p-6 bg-green-50/50 border-b border-gray-200">
                                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                                    <span className="text-3xl">👨‍🎓</span>
+                                    {/* Icône SVG professionnelle */}
+                                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20v-2c0-.523-.197-1.037-.563-1.424M17 20a2 2 0 01-2-2v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 01-2 2h4l-2 2h8m-9.172-2.172a1 1 0 010-1.414m2.828 0a1 1 0 010 1.414m2.828 0a1 1 0 010 1.414M7 11A6 6 0 1019 11A6 6 0 007 11z"></path></svg>
                                     Gestion des Étudiants
                                 </h2>
-                                <p className="text-gray-600 mt-2">Liste complète des étudiants inscrits</p>
+                                <p className="text-gray-500 text-sm mt-1">Liste complète des étudiants inscrits et leurs informations clés.</p>
                             </div>
 
-                            <div className="overflow-x-auto custom-scrollbar">
-                                <table className="min-w-full text-base">
-                                    <thead className="bg-gradient-to-r from-gray-50 to-green-50">
+                            {/* CORPS DU TABLEAU */}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm">
+
+                                    {/* TÊTE DE TABLEAU : Fond uni pour la clarté */}
+                                    <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
-                                                👤 Prénom
+                                            <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
+                                                Prénom
                                             </th>
-                                            <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
-                                                📛 Nom
+                                            <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
+                                                Nom
                                             </th>
-                                            <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
-                                                🆔 Matricule
+                                            <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
+                                                Matricule
                                             </th>
-                                            <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
-                                                🏫 Classe
+                                            <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
+                                                Classe
                                             </th>
-                                            <th className="py-5 px-6 text-center font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
-                                                ⚡ Actions
+                                            <th className="py-3.5 px-6 text-center font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
+                                                Actions
                                             </th>
                                         </tr>
                                     </thead>
+
                                     <tbody className="divide-y divide-gray-100">
                                         {filteredStudents.length > 0 ? (
                                             filteredStudents
-
+                                                // La fonction de tri (sort) semble trier une variable par elle-même (var1 - var2),
+                                                // j'ai conservé la structure mais je vous conseille de la revoir pour trier par nom (e.g. var1.localeCompare(var2))
                                                 .sort((a, b) => {
+                                                    // Logique de tri à revoir : actuellement trie une variable par elle-même
                                                     const var1 = a.first_name;
                                                     const var2 = a.first_name;
                                                     return var1 - var2
@@ -1111,39 +1276,44 @@ const Dashboard: React.FC = () => {
                                                     return (
                                                         <tr
                                                             key={s.id}
-                                                            className="hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300 group"
+                                                            // Hover simple et élégant
+                                                            className="hover:bg-green-50/20 transition-colors duration-200 group"
                                                             style={{ animationDelay: `${index * 50}ms` }}
                                                         >
-                                                            <td className="py-5 px-6 font-semibold text-gray-800 group-hover:text-green-700 transition-colors duration-200">
+                                                            <td className="py-4 px-6 font-medium text-gray-800">
                                                                 {firstName}
                                                             </td>
-                                                            <td className="py-5 px-6 font-medium text-gray-700 group-hover:text-green-800 transition-colors duration-200">
+                                                            <td className="py-4 px-6 text-gray-700">
                                                                 {lastName}
                                                             </td>
-                                                            <td className="py-5 px-6">
-                                                                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-mono group-hover:bg-green-100 group-hover:text-green-800 transition-all duration-200">
+                                                            <td className="py-4 px-6">
+                                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">
                                                                     {s.student_id}
                                                                 </span>
                                                             </td>
-                                                            <td className="py-5 px-6">
-                                                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium group-hover:bg-blue-200 transition-all duration-200">
+                                                            <td className="py-4 px-6">
+                                                                {/* Badge de classe avec couleur et fond coordonnés */}
+                                                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                                                                     {s.class_group}
                                                                 </span>
                                                             </td>
-                                                            <td className="py-5 px-6">
-                                                                <div className="flex justify-center space-x-3">
+                                                            <td className="py-4 px-6">
+                                                                <div className="flex justify-center space-x-2">
+                                                                    {/* Bouton Modifier : Couleur primaire */}
                                                                     <button
                                                                         onClick={() => handleEdit(s)}
-                                                                        className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                                        className="p-2 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors duration-200 shadow-sm flex items-center gap-1"
                                                                     >
-                                                                        <span>✏️</span>
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
                                                                         Modifier
                                                                     </button>
+
+                                                                    {/* Bouton Supprimer : Couleur d'alerte sobre */}
                                                                     <button
                                                                         onClick={() => handleDeleteStudent(s.id)}
-                                                                        className="px-5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                                        className="p-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors duration-200 shadow-sm flex items-center gap-1"
                                                                     >
-                                                                        <span>🗑️</span>
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                                         Supprimer
                                                                     </button>
                                                                 </div>
@@ -1155,10 +1325,10 @@ const Dashboard: React.FC = () => {
                                             <tr>
                                                 <td colSpan={5} className="py-16 text-center">
                                                     <div className="flex flex-col items-center justify-center text-gray-400">
-                                                        <span className="text-6xl mb-4">👥</span>
-                                                        <p className="text-xl font-semibold mb-2">Aucun étudiant trouvé</p>
-                                                        <p className="text-gray-500">
-                                                            {searchQuery ? "Aucun résultat pour votre recherche" : "Commencez par ajouter votre premier étudiant"}
+                                                        <svg className="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                                                        <p className="text-base font-medium mb-1 text-gray-500">Aucun étudiant trouvé</p>
+                                                        <p className="text-gray-400 text-sm">
+                                                            {searchQuery ? "Veuillez vérifier votre recherche." : "Ajoutez un étudiant pour commencer."}
                                                         </p>
                                                     </div>
                                                 </td>
@@ -1168,16 +1338,11 @@ const Dashboard: React.FC = () => {
                                 </table>
                             </div>
 
-                            {/* Pied de tableau stylisé */}
+                            {/* PIED DE TABLEAU : Information de décompte claire */}
                             {filteredStudents.length > 0 && (
-                                <div className="bg-gradient-to-r from-gray-50 to-green-50 px-8 py-4 border-t border-gray-100">
-                                    <p className="text-sm text-gray-600 font-medium">
-                                        📊 Résultats : <span className="text-green-600 font-bold">{filteredStudents.length}</span> étudiant{filteredStudents.length > 1 ? 's' : ''}
-                                        {searchQuery && (
-                                            <span className="text-gray-500 ml-2">
-                                                pour "{searchQuery}"
-                                            </span>
-                                        )}
+                                <div className="bg-gray-50 px-6 py-3 border-t border-gray-100">
+                                    <p className="text-xs text-gray-600 font-medium">
+                                        Total des résultats : <span className="text-green-600 font-bold">{filteredStudents.length}</span> étudiant{filteredStudents.length > 1 ? 's' : ''} affiché{filteredStudents.length > 1 ? 's' : ''}
                                     </p>
                                 </div>
                             )}
@@ -1186,47 +1351,57 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {/* Vue des projets */}
-                {view === 'projects' && !loading && (
-                    <div className="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-3xl">
-                        <div className="p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
-                            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                                <span className="text-3xl">📂</span>
-                                Gestion des Projets
+                {view === 'projects' && !loadingProject && (
+                    <div className="bg-white shadow-2xl rounded-xl overflow-hidden border border-indigo-100/50 transition-all duration-300 hover:shadow-indigo-300/50">
+
+                        {/* EN-TÊTE : Titre et description avec un dégradé doux et des couleurs vives */}
+                        <div className="p-8 bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-100/50">
+                            <h2 className="text-3xl font-extrabold text-gray-800 flex items-center gap-3">
+                                {/* Icône plus grande et colorée */}
+                                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                                <span className='text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600'>
+                                    Gestion des Projets 🚀
+                                </span>
                             </h2>
-                            <p className="text-gray-600 mt-2">Liste complète des projets créés</p>
+                            <p className="text-indigo-500 mt-2 font-medium">Visualisez et gérez l'ensemble des travaux du club.</p>
                         </div>
 
-                        <div className="overflow-x-auto custom-scrollbar">
+                        {/* CORPS DU TABLEAU */}
+                        <div className="overflow-x-auto">
                             <table className="min-w-full text-base">
-                                <thead className="bg-gradient-to-r from-gray-50 to-blue-50">
+
+                                {/* TÊTE DE TABLEAU : Fond avec un dégradé pour la vivacité */}
+                                <thead className="bg-gradient-to-r from-gray-100 to-blue-100/50">
                                     <tr>
-                                        <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
+                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
                                             📋 Nom du projet
                                         </th>
-                                        <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
+                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
                                             📝 Description
                                         </th>
-                                        <th className="py-5 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
+                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
                                             👥 Étudiants assignés
                                         </th>
-                                        <th className="py-5 px-6 text-center font-bold text-gray-700 uppercase tracking-wider text-sm border-b border-gray-200">
+                                        <th className="py-4 px-6 text-center font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
                                             ⚡ Actions
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+
+                                <tbody className="divide-y divide-indigo-50/50">
                                     {projects.length > 0 ? (
                                         projects.map((project, index) => (
                                             <tr
                                                 key={project.id}
-                                                className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300 group"
+                                                // Hover plus visible, avec un effet de transformation subtil
+                                                className="hover:bg-blue-50/70 transition-all duration-200 group transform hover:scale-[1.005]"
                                                 style={{ animationDelay: `${index * 50}ms` }}
                                             >
-                                                <td className="py-5 px-6 font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-200">
+                                                <td className="py-5 px-6 font-extrabold text-gray-800 group-hover:text-indigo-700 transition-colors duration-200">
                                                     {project.title}
                                                 </td>
-                                                <td className="py-5 px-6 text-gray-600 max-w-md">
-                                                    <div className="line-clamp-2 group-hover:text-gray-800 transition-colors duration-200">
+                                                <td className="py-5 px-6 text-gray-600 max-w-sm">
+                                                    <div className="line-clamp-2">
                                                         {project.description}
                                                     </div>
                                                 </td>
@@ -1236,13 +1411,14 @@ const Dashboard: React.FC = () => {
                                                             {project.students.slice(0, 3).map((student) => (
                                                                 <span
                                                                     key={student.id}
-                                                                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium transition-all duration-200 hover:bg-blue-200 hover:scale-105"
+                                                                    // Badges plus colorés
+                                                                    className="px-3 py-1 bg-indigo-200 text-indigo-900 rounded-full text-xs font-semibold shadow-md transition-all duration-200 hover:bg-indigo-300"
                                                                 >
                                                                     {student.user.name}
                                                                 </span>
                                                             ))}
                                                             {project.students.length > 3 && (
-                                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                                                                <span className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-xs font-medium">
                                                                     +{project.students.length - 3}
                                                                 </span>
                                                             )}
@@ -1253,18 +1429,21 @@ const Dashboard: React.FC = () => {
                                                 </td>
                                                 <td className="py-5 px-6">
                                                     <div className="flex justify-center space-x-3">
+                                                        {/* Bouton Éditer avec dégradé et effet 3D au survol */}
                                                         <button
                                                             onClick={() => handleEditProject(project)}
-                                                            className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                            className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl text-sm font-bold hover:from-indigo-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-indigo-500/50 flex items-center gap-2"
                                                         >
-                                                            <span>✏️</span>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
                                                             Éditer
                                                         </button>
+
+                                                        {/* Bouton Supprimer avec dégradé et effet 3D au survol */}
                                                         <button
                                                             onClick={() => handleDeleteProject(project.id)}
-                                                            className="px-5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                                                            className="px-5 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl text-sm font-bold hover:from-red-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-red-500/50 flex items-center gap-2"
                                                         >
-                                                            <span>🗑️</span>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                             Supprimer
                                                         </button>
                                                     </div>
@@ -1273,11 +1452,11 @@ const Dashboard: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={4} className="py-16 text-center">
+                                            <td colSpan={4} className="py-20 text-center bg-gray-50/50">
                                                 <div className="flex flex-col items-center justify-center text-gray-400">
-                                                    <span className="text-6xl mb-4">📭</span>
-                                                    <p className="text-xl font-semibold mb-2">Aucun projet trouvé</p>
-                                                    <p className="text-gray-500">Commencez par créer votre premier projet</p>
+                                                    <span className="text-7xl mb-4 animate-pulse">✨</span>
+                                                    <p className="text-xl font-bold mb-1 text-gray-500">Prêt à innover ?</p>
+                                                    <p className="text-indigo-400 text-lg">Créez votre premier projet !</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1286,15 +1465,23 @@ const Dashboard: React.FC = () => {
                             </table>
                         </div>
 
-                        {/* Pied de tableau stylisé */}
+                        {/* PIED DE TABLEAU : Information de décompte stylisée */}
                         {projects.length > 0 && (
-                            <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-8 py-4 border-t border-gray-100">
-                                <p className="text-sm text-gray-600 font-medium">
-                                    📊 Total : <span className="text-blue-600 font-bold">{projects.length}</span> projet{projects.length > 1 ? 's' : ''}
+                            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-8 py-4 border-t border-indigo-100/50">
+                                <p className="text-sm text-gray-700 font-bold">
+                                    📊 Total : <span className="text-indigo-600 text-lg">{projects.length}</span> projet{projects.length > 1 ? 's' : ''} gérés
                                 </p>
                             </div>
                         )}
                     </div>
+                )}
+                {/* vue de performance des étudiants */}
+                {view === 'performance' && !loading && (
+                    <MeritChart />
+                )}
+
+                {view === 'forum' && !loading && (
+                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-8 py-4 border-t border-indigo-100/50">Cette Fonctionnalités est en cours de développement... !</div>
                 )}
 
                 {/* Modal de confirmation de suppression */}

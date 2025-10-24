@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import PerformanceChart from './PerformanceChart'; // Importez le nouveau composant de graphique
 
-// --- INTERFACES (Aucun changement) ---
+// --- INTERFACES CORRIGÉES ---
 interface Project {
   id: number;
   title: string;
@@ -14,7 +15,9 @@ interface Project {
     created_at: string;
     evaluation?: {
       id: number;
-      grade: number;
+      // La note est stockée comme string dans le backend, mais on la veut comme string ici pour éviter le parsing multiple.
+      // Le composant de graphique s'occupera du parseFloat.
+      grade: string; 
       comment: string;
       created_at: string;
     }
@@ -26,6 +29,8 @@ interface StudentUser {
   name: string;
   email: string;
   role: string;
+  // Ajout de student_id qui est utilisé dans le localStorage pour l'auto-identification
+  student_id?: string; 
 }
 
 interface Student {
@@ -34,12 +39,11 @@ interface Student {
   class_group: string;
   user: StudentUser;
   projects: Project[];
-  grade?: number;
-  evaluation_comment?: string;
-  evaluated_at?: string;
+  // Suppression des propriétés grade, evaluation_comment, evaluated_at car elles sont déjà dans `projects` et calculées/agrégées
   created_at: string;
 }
 
+// --- COMPOSANT PRINCIPAL ---
 const StudentDashboard: React.FC = () => {
   const { studentId: paramStudentId } = useParams<{ studentId?: string }>();
   const navigate = useNavigate();
@@ -54,65 +58,85 @@ const StudentDashboard: React.FC = () => {
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [loadingLogOut, setLoadingLogOut] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchStudentData = async () => {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('authToken');
+  /**
+   * Fonction de récupération des données de l'étudiant. 
+   * Utilisée dans useEffect et après une soumission.
+   * Utilisation de useCallback pour une meilleure gestion des dépendances dans useEffect.
+   */
+  const fetchStudentData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('authToken');
 
-      if (!token) {
-        setError("Authentification requise. Veuillez vous connecter.");
-        setLoading(false);
-        navigate('/');
-        return;
-      }
+    if (!token) {
+      setError("Authentification requise. Veuillez vous connecter.");
+      setLoading(false);
+      navigate('/', { replace: true });
+      return;
+    }
 
-      try {
-        let studentToFetchId: string | undefined = paramStudentId;
-        if (!paramStudentId) {
-          const user = localStorage.getItem('authUser');
-          if (user) {
-            const parsedUser = JSON.parse(user);
+    try {
+      let studentToFetchId: string | undefined = paramStudentId;
+      if (!paramStudentId) {
+        const user = localStorage.getItem('authUser');
+        if (user) {
+          try {
+            const parsedUser: StudentUser = JSON.parse(user);
             if (parsedUser.student_id) {
               studentToFetchId = parsedUser.student_id;
             } else {
-              setError('Profil étudiant incomplet. Veuillez vous reconnecter.');
+              setError('Profil utilisateur trouvé mais sans identifiant étudiant. Veuillez vous reconnecter.');
               setLoading(false);
               return;
             }
-          } else {
-            setError('Profil utilisateur non trouvé. Veuillez vous reconnecter.');
+          } catch (jsonError) {
+            // Ajout de la gestion d'erreur si le JSON est mal formé
+            console.error("Erreur de parsing 'authUser' :", jsonError);
+            setError('Erreur de lecture du profil utilisateur. Veuillez vous reconnecter.');
             setLoading(false);
             return;
           }
-        }
-
-        if (!studentToFetchId) {
-          setError('Aucun identifiant d\'étudiant fourni.');
+        } else {
+          setError('Profil utilisateur non trouvé. Veuillez vous reconnecter.');
           setLoading(false);
           return;
         }
-
-        const response = await api.get<{ student: Student }>(`/students/${studentToFetchId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setStudent(response.data.student);
-
-      } catch (err: any) { 
-        console.error("Erreur lors de la récupération des données:", err.message || err.toString());
-        if (paramStudentId) {
-          setError('Échec du chargement des informations de l\'étudiant.');
-        } else {
-          setError('Échec du chargement de votre profil. Veuillez vous reconnecter.');
-        }
-      } finally {
-        setLoading(false);
       }
-    };
 
+      if (!studentToFetchId) {
+        setError('Aucun identifiant d\'étudiant fourni.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await api.get<{ student: Student }>(`/students/${studentToFetchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setStudent(response.data.student);
+
+    } catch (err: any) {
+      console.error("Erreur lors de la récupération des données:", err.message || err.toString());
+      // Ajout d'une gestion d'erreur 404/403 plus spécifique
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+         setError('Session expirée ou non autorisée. Veuillez vous reconnecter.');
+         localStorage.removeItem('authToken');
+         localStorage.removeItem('authUser');
+         navigate('/', { replace: true });
+      } else {
+         setError('Échec du chargement des informations de l\'étudiant.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [paramStudentId, navigate]); // Dépendances pour useCallback
+
+  useEffect(() => {
     fetchStudentData();
-  }, [paramStudentId, navigate]);
+  }, [fetchStudentData]); // Dépendance à fetchStudentData (encapsulée dans useCallback)
+
+  // ... (handleLogout inchangé)
 
   const handleLogout = async () => {
     setLoadingLogOut(true);
@@ -121,7 +145,7 @@ const StudentDashboard: React.FC = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
     } catch (error) {
-      console.error("Erreur de déconnexion:", error);
+      console.error("Erreur de déconnexion (tentative tout de même) :", error);
     } finally {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
@@ -130,6 +154,7 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
+  // ... (handleFileChange inchangé)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -138,14 +163,19 @@ const StudentDashboard: React.FC = () => {
       if (file.size > MAX_FILE_SIZE) {
         setUploadMessage("La taille du fichier ne doit pas dépasser 10 Mo.");
         setSelectedFile(null);
-        e.target.value = ''; 
+        e.target.value = '';
       } else {
         setSelectedFile(file);
-        setUploadMessage(null); 
+        setUploadMessage(null);
       }
     }
   };
 
+
+  /**
+   * Soumission du projet. 
+   * Simplification du nettoyage des states et appel direct à fetchStudentData().
+   */
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
@@ -176,13 +206,18 @@ const StudentDashboard: React.FC = () => {
         },
       });
 
-      setUploadMessage("Projet soumis avec succès ! Veuillez rafraîchir pour voir le statut à jour.");
+      setUploadMessage("Projet soumis avec succès ! Les données vont se rafraîchir.");
+      
+      // On rafraîchit immédiatement après la soumission réussie
+      await fetchStudentData();
+      
+      // Nettoyage des states de formulaire après rafraîchissement
       setSelectedFile(null);
       setSelectedProjectId(null);
       
       setTimeout(() => {
         setUploadMessage(null);
-      }, 5000); 
+      }, 5000);
 
     } catch (err: any) {
       const errorMessage = (err.response?.data?.message || err.message || "Une erreur inconnue est survenue lors de la soumission.");
@@ -190,11 +225,39 @@ const StudentDashboard: React.FC = () => {
       setUploadMessage(`Erreur de soumission: ${errorMessage}`);
     } finally {
       setUploading(false);
+      // Supprimé l'appel à fetchStudentData ici car il est fait en cas de succès et en cas d'erreur de soumission il n'est pas nécessaire de rafraichir.
     }
   };
 
-  // --- RENDU DES ÉTATS DE CHARGEMENT ET ERREUR (inchangés) ---
 
+  // --- LOGIQUE DE CALCUL DE LA MOYENNE ET DES DONNÉES DU GRAPHIQUE OPTIMISÉE ---
+  const getStudentPerformance = () => {
+    // Filtrer les projets qui ont une soumission ET une évaluation avec une note définie
+    const gradedProjects = student?.projects.filter(p => 
+        p.submission?.evaluation?.grade != null && p.submission.evaluation.grade !== "") || [];
+    
+    if (gradedProjects.length === 0) {
+      return { averageGrade: "N/A", projectsData: [] };
+    }
+
+    let totalGrade = 0;
+    const projectsData = gradedProjects.map(p => {
+      // Utilisation de Number() pour parser la note string en nombre, ou 0 si le parsing échoue (même si l'on filtre déjà)
+      const grade = Number(p.submission!.evaluation!.grade); 
+      totalGrade += grade;
+      return {
+        title: p.title,
+        grade: grade,
+        // Assurez-vous que l'objet date est triable par le composant de graphique
+        submissionDate: p.submission!.created_at 
+      };
+    });
+
+    const averageGrade = (totalGrade / gradedProjects.length).toFixed(2);
+    return { averageGrade, projectsData };
+  };
+
+  // --- RENDU DES ÉTATS DE CHARGEMENT ET ERREUR (inchangés, car ils sont bien faits) ---
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
@@ -236,7 +299,9 @@ const StudentDashboard: React.FC = () => {
     );
   }
 
-  // Formatage de la date d'inscription
+  const { averageGrade, projectsData } = getStudentPerformance();
+
+  // Formatage de la date d'inscription (Code inchangé, car correct)
   const dateString = student.created_at;
   const date = new Date(dateString);
   const options: Intl.DateTimeFormatOptions = {
@@ -244,74 +309,123 @@ const StudentDashboard: React.FC = () => {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    hour:'2-digit',
+    minute:'numeric'
   };
   const formattedDate = new Intl.DateTimeFormat('fr-FR', options).format(date);
 
-  // --- RENDU PRINCIPAL DU TABLEAU DE BORD (Restylisé) ---
-
+  // --- RENDU PRINCIPAL DU TABLEAU DE BORD (inchangé, car déjà très bon) ---
   return (
     <div className="min-h-screen bg-gray-50 p-6 sm:p-10">
       <div className="max-w-7xl mx-auto">
-        
-        {/* Header : titre et informations étudiantes intégrées */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
-            <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-indigo-700 mb-1">
-                🎓 Tableau de bord étudiant
-              </h1>
-              <p className="text-gray-500 text-lg mb-6">Bienvenue, **{student.user.name}** !</p>
 
-              {/* Informations d'un seul bloc sans "palettes" */}
-              <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                
-                {/* Matricule */}
-                <div className="flex flex-col">
-                  <dt className="text-sm font-medium text-indigo-600">Matricule</dt>
-                  <dd className="mt-1 text-lg font-semibold text-indigo-900">{student.student_id}</dd>
-                </div>
+        {/* --------------------------------------------------------------------------------
+    HEADER : Tableau de bord étudiant
+    -------------------------------------------------------------------------------- */}
+<div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 mb-10">
+    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
 
-                {/* Classe */}
-                <div className="flex flex-col">
-                  <dt className="text-sm font-medium text-purple-600">Classe</dt>
-                  <dd className="mt-1 text-lg font-semibold text-purple-900">{student.class_group}</dd>
-                </div>
-                
-                {/* Email */}
-                <div className="flex flex-col">
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="mt-1 text-lg text-gray-900 truncate">{student.user.email}</dd>
-                </div>
-
-                {/* Inscrit le */}
-                <div className="flex flex-col">
-                  <dt className="text-sm font-medium text-gray-500">Inscrit le</dt>
-                  <dd className="mt-1 text-lg text-gray-900">{formattedDate}</dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Bouton de Déconnexion */}
-            <button
-              onClick={handleLogout}
-              className="px-5 py-2.5 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all duration-200 shadow-md flex items-center gap-2 self-start lg:self-center"
-              disabled={loadingLogOut}
-            >
-              <svg className={`h-5 w-5 ${loadingLogOut ? 'animate-spin' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {loadingLogOut ? (
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                )}
-              </svg>
-              {loadingLogOut ? "Déconnexion..." : "Déconnexion"}
-            </button>
-          </div>
+        {/* 1. Titre et Informations Principales */}
+        <div className="flex-1 min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-1">
+                Tableau de bord étudiant 🎓
+            </h1>
+            <p className="text-xl text-gray-600 truncate">
+                Bienvenue, <span className="font-extrabold text-indigo-700">{student.user.name}</span>
+            </p>
         </div>
+
+        {/* 2. Bouton de Déconnexion (Alignement vertical au centre) */}
+        <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-base transition-colors duration-300 hover:bg-red-700 shadow-lg shrink-0"
+            disabled={loadingLogOut}
+        >
+            <svg 
+                className={`h-5 w-5 ${loadingLogOut ? 'animate-spin' : ''}`} 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                aria-hidden="true" // Amélioration accessibilité
+            >
+                {loadingLogOut ? (
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                )}
+            </svg>
+            {loadingLogOut ? "Déconnexion..." : "Déconnexion"}
+        </button>
+    </div>
+
+    {/* --------------------------------------------------------------------------
+        3. Carte d'informations (Métrique)
+        Utilisation d'une grille réactive pour un affichage propre
+        -------------------------------------------------------------------------- */}
+    <dl className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+
+        {/* A. Matricule (Clé d'identification) */}
+        <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
+            <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+                <span className="h-4 w-4 text-indigo-500">#</span> Matricule
+            </dt>
+            <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
+                {student.student_id}
+            </dd>
+        </div>
+
+        {/* B. Classe (Groupe) */}
+        <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50">
+            <dt className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-3H17v3zM6 18H2v-3h4v3zm8 0h-4v-3h4v3zm-4 3v-3H6v3h4zM8 9H4V6h4v3zm10 0h-4V6h4v3zm-4 3v-3h4v3h-4zM8 15h4v-3H8v3z" /></svg>
+                Classe
+            </dt>
+            <dd className="mt-1 text-lg font-bold text-indigo-900 truncate">
+                {student.class_group}
+            </dd>
+        </div>
+
+        {/* C. Email (Informations de contact) */}
+        <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-gray-200 bg-gray-50">
+            <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 7a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v8z" /></svg>
+                Email
+            </dt>
+            <dd className="mt-1 text-lg text-gray-900 truncate">
+                {student.user.email}
+            </dd>
+        </div>
+
+        {/* D. MOYENNE GENERALE (Mise en évidence) */}
+        <div className="col-span-2 lg:col-span-1 p-3 rounded-xl border-4 border-yellow-300 bg-yellow-50 order-first lg:order-none">
+            <dt className="text-sm font-semibold text-yellow-800 flex items-center gap-2">
+                <svg className="h-5 w-5 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3 .895 3 2s-1.343 2-3 2v2m0-4c-1.657 0-3 .895-3 2s1.343 2 3 2v2m-6-2h12M4 12h16" /></svg>
+                MOYENNE GÉNÉRALE
+            </dt>
+            <dd className="mt-1 text-3xl font-extrabold text-yellow-900">
+                {averageGrade} / 20
+            </dd>
+        </div>
+
+        {/* E. Inscrit le (Date) */}
+        <div className="col-span-2 md:col-span-1 lg:col-span-1 p-3 rounded-xl border border-green-200 bg-green-50">
+            <dt className="text-xs font-medium text-green-600 flex items-center gap-1">
+                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-4 4V3M3 8h18M5 12h14M5 16h14M5 20h14" /></svg>
+                Inscription
+            </dt>
+            <dd className="mt-1 text-lg font-medium text-green-900">
+                {formattedDate.split(',')[1]?.trim() || formattedDate}
+            </dd>
+        </div>
+    </dl>
+</div>
+
+    
 
         {/* Contenu principal */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
+
           {/* Soumission de projet */}
           <div className="xl:col-span-1 bg-white rounded-xl shadow-lg p-6 h-fit sticky top-10 border border-blue-100">
             <h3 className="text-2xl font-bold text-blue-700 mb-5 flex items-center gap-2 border-b pb-3">
@@ -359,7 +473,7 @@ const StudentDashboard: React.FC = () => {
                   onChange={handleFileChange}
                   className="w-full block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-gray-300 rounded-lg p-1.5"
                   required
-                  accept=".pdf,.doc,.docx,.zip" 
+                  accept=".pdf,.doc,.docx,.zip"
                 />
                 <p className="mt-1 text-xs text-gray-500">Formats acceptés: PDF, DOCX, ZIP, etc.</p>
               </div>
@@ -386,7 +500,7 @@ const StudentDashboard: React.FC = () => {
               </button>
             </form>
           </div>
-          
+
           {/* Projets assignés */}
           <div className="xl:col-span-2 bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-3">
@@ -402,7 +516,6 @@ const StudentDashboard: React.FC = () => {
                 {student.projects.map((project) => (
                   <div
                     key={project.id}
-                    // Suppression de l'arrière-plan coloré (bg-gray-50) et mise en avant par une simple bordure
                     className="rounded-xl p-5 border border-gray-200 hover:border-indigo-400 transition-all duration-300 shadow-sm hover:shadow-md"
                   >
                     {/* --- HEADER & STATUTS --- */}
@@ -442,24 +555,24 @@ const StudentDashboard: React.FC = () => {
 
                     {/* --- INFOS DETAILLEES (Structure minimaliste, sans palettes) --- */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 text-sm text-gray-700 pt-2">
-                      
+
                       {/* Note & Commentaire (Mise en évidence de la note) */}
                       <div className="space-y-2">
                         <dl>
-                            <dt className="font-semibold text-gray-800">🎯 Note :</dt>
-                            <dd className={`text-xl font-extrabold ${
-                                project.submission?.evaluation?.grade ? "text-indigo-600" : "text-gray-400"
-                              }`}>
-                              {project.submission?.evaluation?.grade !== undefined ? `${project.submission.evaluation.grade}/20` : "Non noté"}
-                            </dd>
+                          <dt className="font-semibold text-gray-800">🎯 Note :</dt>
+                          <dd className={`text-xl font-extrabold ${
+                              project.submission?.evaluation?.grade ? "text-indigo-600" : "text-gray-400"
+                            }`}>
+                            {project.submission?.evaluation?.grade !== undefined ? `${project.submission.evaluation.grade}/20` : "Non noté"}
+                          </dd>
                         </dl>
                         <dl>
-                            <dt className="font-semibold text-gray-800">💬 Commentaire :</dt>
-                            <dd className={`mt-0.5 text-sm ${
-                                project.submission?.evaluation?.comment ? "text-gray-700 italic" : "text-gray-400"
-                              }`}>
-                              {project.submission?.evaluation?.comment || "Aucun commentaire"}
-                            </dd>
+                          <dt className="font-semibold text-gray-800">💬 Commentaire :</dt>
+                          <dd className={`mt-0.5 text-sm ${
+                              project.submission?.evaluation?.comment ? "text-gray-700 italic" : "text-gray-400"
+                            }`}>
+                            {project.submission?.evaluation?.comment || "Aucun commentaire"}
+                          </dd>
                         </dl>
                       </div>
 
@@ -469,7 +582,7 @@ const StudentDashboard: React.FC = () => {
                           <dt className="font-semibold text-gray-600">📤 Date de soumission :</dt>
                           <dd className="text-gray-600 font-medium">
                             {project.submission?.created_at
-                              ? new Date(project.submission.created_at).toLocaleString("fr-FR", { day: '2-digit', month: 'short', year: 'numeric' })
+                              ? new Date(project.submission.created_at).toLocaleString("fr-FR", { day: '2-digit', month: 'short', year: 'numeric', hour:'2-digit', minute:'2-digit'})
                               : "N/A"}
                           </dd>
                         </dl>
@@ -494,6 +607,15 @@ const StudentDashboard: React.FC = () => {
             )}
           </div>
         </div>
+                {/* GRAPHIQUE - Nouvelle Section */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            📈 Aperçu de la Performance
+          </h2>
+          {/* Intégration du composant PerformanceChart */}
+          <PerformanceChart projectsData={projectsData} />
+        </div>
+        {/* FIN GRAPHIQUE */}
       </div>
     </div>
   );

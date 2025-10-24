@@ -8,12 +8,16 @@ interface EvaluationFormProps {
 }
 
 const EvaluationForm: React.FC<EvaluationFormProps> = ({ submissionId, onEvaluate, loading }) => {
-  const [grade, setGrade] = useState<number | "">("");
+  const [grade, setGrade] = useState<number | "">();
   const [comment, setComment] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (grade === "") return;
+    if(comment=="") return
+    if (grade === "" || isNaN(Number(grade))) {
+  onEvaluate(submissionId, 0, comment); // ou null si autorisé
+  return;
+}
     onEvaluate(submissionId, Number(grade), comment);
   };
 
