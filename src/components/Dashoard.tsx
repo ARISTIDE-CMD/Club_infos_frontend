@@ -98,6 +98,7 @@ const Dashboard: React.FC = () => {
     const [isLoadingLogout, setIsloadinLogout] = useState<boolean>(false)
     const [filtered, setFiltered] = useState<Submission[]>([])
     const [grade, setGrade] = useState<number>();
+    const [loadindDelete,setLoadingDelete]=useState<boolean>(false)
     // const [comment, setComment] = useState<string>(submissions.evaluation?.comment ?? '');
     const [formDataStudent, setFormDataStudent] = useState({
         first_name: "",
@@ -416,11 +417,13 @@ const Dashboard: React.FC = () => {
     };
 
     const confirmDelete = async () => {
+        setLoadingDelete(ture)
         if (itemTypeToDelete === 'student') {
             await confirmDeleteStudent();
         } else if (itemTypeToDelete === 'project') {
             await confirmDeleteProject();
         }
+        setLoadingDelete(false)
     };
 
     const confirmDeleteStudent = async () => {
@@ -719,7 +722,7 @@ const Dashboard: React.FC = () => {
         const [isExpanded, setIsExpanded] = useState(false);
 
         return (
-            <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-3xl group">
+            <div className="bg-white rounded-3xl  border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-3xl group">
                 {/* En-tête avec fond dégradé - CLICKABLE */}
                 <div
                     // Suppression du dégradé et utilisation d'un hover très léger
@@ -911,17 +914,26 @@ const Dashboard: React.FC = () => {
             <aside className="w-64 bg-gray-800 text-white flex flex-col p-4 sticky top-0 h-screen overflow-y-auto shadow-xl">
 
                 {/* LOGO & TITRE */}
-                <div className="px-2 py-6 text-2xl font-bold border-b border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                        {/* Icône plus professionnelle ou utilisation de SVG/icône de librairie */}
-                        <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l-2 2-4-4 4-4 2 2v13M15 11l4-4 4 4m-4-4v13"></path>
-                        </svg>
-                        <span className="text-white">
-                            Club Info
-                        </span>
-                    </div>
-                </div>
+                <div className="px-4 py-4 text-2xl font-extrabold border-b border-gray-700/50">
+    <div className="flex items-center gap-3">
+        {/* Icône SVG représentant le code/développement (Chevrons pour les balises) */}
+        <svg 
+            className="w-7 h-7 text-indigo-400" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24" 
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            {/* Balises (Code) */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+        
+        {/* Texte du Club Informatique */}
+        <span className="text-white tracking-wider">
+            Club <span className="text-indigo-400">Informatique</span>
+        </span>
+    </div>
+</div>
 
                 {/* NAVIGATION PRINCIPALE */}
                 <div className="flex-1 mt-8 space-y-2">
@@ -957,7 +969,7 @@ const Dashboard: React.FC = () => {
                                 </svg>
                             )
                         },
-                          {
+                        {
                             key: 'forum', label: 'Forum', icon: (
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -976,7 +988,7 @@ const Dashboard: React.FC = () => {
                                 </svg>
                             )
                         },
-            
+
                     ].map(({ key, label, icon }) => (
                         <button
                             key={key}
@@ -1041,17 +1053,26 @@ const Dashboard: React.FC = () => {
                         {view === 'students' && (
                             <button
                                 onClick={handleCreateStudent}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition"
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition font-semibold flex items-center gap-2"
                             >
-                                ➕ Ajouter étudiant
+                                {/* SVG : Utilisateur avec un signe Plus */}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                                Ajouter un étudiant
                             </button>
                         )}
                         {view === 'projects' && (
                             <button
                                 onClick={handleCreateProject}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition"
+                                // J'ai harmonisé la couleur de survol avec l'indigo pour plus de cohérence, mais vous pouvez garder le vert.
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition font-semibold flex items-center gap-2"
                             >
-                                ➕ Créer un projet
+                                {/* SVG : Dossier/Document avec un signe Plus */}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                                </svg>
+                                Créer un projet
                             </button>
                         )}
                     </div>
@@ -1300,7 +1321,7 @@ const Dashboard: React.FC = () => {
                                                                     {/* Bouton Supprimer : Couleur d'alerte sobre */}
                                                                     <button
                                                                         onClick={() => handleDeleteStudent(s.id)}
-                                                                        className="p-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors duration-200 shadow-sm flex items-center gap-1"
+                                                                        className="p-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-800 transition-colors duration-200 shadow-sm flex items-center gap-1"
                                                                     >
                                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                                         Supprimer
@@ -1341,99 +1362,101 @@ const Dashboard: React.FC = () => {
 
                 {/* Vue des projets */}
                 {view === 'projects' && !loadingProject && (
-                    <div className="bg-white shadow-2xl rounded-xl overflow-hidden border border-indigo-100/50 transition-all duration-300 hover:shadow-indigo-300/50">
+                    <div className="bg-white  rounded-xl   transition-all duration-300 overflow-x-hidden">
 
-                        {/* EN-TÊTE : Titre et description avec un dégradé doux et des couleurs vives */}
-                        <div className="p-8 bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-100/50">
-                            <h2 className="text-3xl font-extrabold text-gray-800 flex items-center gap-3">
-                                {/* Icône plus grande et colorée */}
-                                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
-                                <span className='text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600'>
-                                    Gestion des Projets 🚀
+                        {/* EN-TÊTE : Titre et description (Fond uni et élégant) */}
+                        <div className="p-6 sm:p-8 border-b border-gray-200">
+                            <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                                {/* Icône de Dossier/Projet */}
+                                <svg className="w-7 h-7 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                                <span className='text-indigo-800'>
+                                    Gestion des Projets
                                 </span>
                             </h2>
-                            <p className="text-indigo-500 mt-2 font-medium">Visualisez et gérez l'ensemble des travaux du club.</p>
+                            <p className="text-gray-500 mt-2">Visualisez et gérez l'ensemble des travaux du club.</p>
                         </div>
 
                         {/* CORPS DU TABLEAU */}
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-base">
 
-                                {/* TÊTE DE TABLEAU : Fond avec un dégradé pour la vivacité */}
-                                <thead className="bg-gradient-to-r from-gray-100 to-blue-100/50">
+                                {/* TÊTE DE TABLEAU : Fond uni, bordures nettes */}
+                                <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
-                                            📋 Nom du projet
+                                        <th className="py-3 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200 w-[20%]">
+                                            Nom du projet
                                         </th>
-                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
-                                            📝 Description
+                                        <th className="py-3 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200 w-[40%]">
+                                            Description
                                         </th>
-                                        <th className="py-4 px-6 text-left font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
-                                            👥 Étudiants assignés
+                                        <th className="py-3 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200 w-[25%]">
+                                            Étudiants assignés
                                         </th>
-                                        <th className="py-4 px-6 text-center font-bold text-gray-700 uppercase tracking-wider text-sm border-b-2 border-indigo-200">
-                                            ⚡ Actions
+                                        <th className="py-3 px-6 text-center font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200 w-[15%]">
+                                            Actions
                                         </th>
                                     </tr>
                                 </thead>
 
-                                <tbody className="divide-y divide-indigo-50/50">
+                                <tbody className="divide-y divide-gray-100">
                                     {projects.length > 0 ? (
                                         projects.map((project, index) => (
                                             <tr
                                                 key={project.id}
-                                                // Hover plus visible, avec un effet de transformation subtil
-                                                className="hover:bg-blue-50/70 transition-all duration-200 group transform hover:scale-[1.005]"
-                                                style={{ animationDelay: `${index * 50}ms` }}
+                                                // Hover subtil avec une couleur de survol professionnelle
+                                                className="hover:bg-indigo-50/50 transition-colors duration-200"
                                             >
-                                                <td className="py-5 px-6 font-extrabold text-gray-800 group-hover:text-indigo-700 transition-colors duration-200">
+                                                <td className="py-4 px-6 font-medium text-gray-900 group-hover:text-indigo-700">
                                                     {project.title}
                                                 </td>
-                                                <td className="py-5 px-6 text-gray-600 max-w-sm">
+                                                <td className="py-4 px-6 text-gray-600 max-w-sm">
+                                                    {/* Maintien du line-clamp pour une gestion propre de la description */}
                                                     <div className="line-clamp-2">
                                                         {project.description}
                                                     </div>
                                                 </td>
-                                                <td className="py-5 px-6">
+                                                <td className="py-4 px-6">
                                                     {project.students.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-2">
+                                                        <div className="flex flex-wrap gap-1.5">
                                                             {project.students.slice(0, 3).map((student) => (
                                                                 <span
                                                                     key={student.id}
-                                                                    // Badges plus colorés
-                                                                    className="px-3 py-1 bg-indigo-200 text-indigo-900 rounded-full text-xs font-semibold shadow-md transition-all duration-200 hover:bg-indigo-300"
+                                                                    // Badges plus sobres, mais bien contrastés
+                                                                    className="px-3 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium"
                                                                 >
                                                                     {student.user.name}
                                                                 </span>
                                                             ))}
                                                             {project.students.length > 3 && (
-                                                                <span className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-xs font-medium">
+                                                                <span className="px-3 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
                                                                     +{project.students.length - 3}
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-gray-400 italic">Aucun étudiant assigné</span>
+                                                        <span className="text-gray-400 italic text-sm">Aucun assignement</span>
                                                     )}
                                                 </td>
-                                                <td className="py-5 px-6">
-                                                    <div className="flex justify-center space-x-3">
-                                                        {/* Bouton Éditer avec dégradé et effet 3D au survol */}
+                                                <td className="py-4 px-6">
+                                                    <div className="flex justify-center space-x-2">
+                                                        {/* Boutons d'action unifiés (sans dégradé exagéré) */}
                                                         <button
                                                             onClick={() => handleEditProject(project)}
-                                                            className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl text-sm font-bold hover:from-indigo-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-indigo-500/50 flex items-center gap-2"
+                                                            className="p-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors duration-200 shadow-md flex items-center justify-center"
+                                                            title="Éditer le projet"
                                                         >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
-                                                            Éditer
+                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
+                                                            Modifier
                                                         </button>
 
-                                                        {/* Bouton Supprimer avec dégradé et effet 3D au survol */}
                                                         <button
                                                             onClick={() => handleDeleteProject(project.id)}
-                                                            className="px-5 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl text-sm font-bold hover:from-red-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-red-500/50 flex items-center gap-2"
+                                                            className="p-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-800 transition-colors duration-200 shadow-md flex items-center justify-center"
+                                                            title="Supprimer le projet"
+                                                          
                                                         >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                            Supprimer
+                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                          Supprimer
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1441,11 +1464,11 @@ const Dashboard: React.FC = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={4} className="py-20 text-center bg-gray-50/50">
+                                            <td colSpan={4} className="py-20 text-center bg-gray-50">
                                                 <div className="flex flex-col items-center justify-center text-gray-400">
-                                                    <span className="text-7xl mb-4 animate-pulse">✨</span>
-                                                    <p className="text-xl font-bold mb-1 text-gray-500">Prêt à innover ?</p>
-                                                    <p className="text-indigo-400 text-lg">Créez votre premier projet !</p>
+                                                    <span className="text-7xl mb-4 text-indigo-300">💡</span>
+                                                    <p className="text-xl font-bold mb-1 text-gray-600">Aucun projet trouvé.</p>
+                                                    <p className="text-gray-500 text-lg">Créez le premier pour commencer !</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1454,18 +1477,18 @@ const Dashboard: React.FC = () => {
                             </table>
                         </div>
 
-                        {/* PIED DE TABLEAU : Information de décompte stylisée */}
+                        {/* PIED DE TABLEAU : Information de décompte simple et claire */}
                         {projects.length > 0 && (
-                            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-8 py-4 border-t border-indigo-100/50">
-                                <p className="text-sm text-gray-700 font-bold">
-                                    📊 Total : <span className="text-indigo-600 text-lg">{projects.length}</span> projet{projects.length > 1 ? 's' : ''} gérés
+                            <div className="bg-gray-50 px-8 py-3 border-t border-gray-200">
+                                <p className="text-sm text-gray-600 font-medium">
+                                    <span className="text-indigo-600 font-bold">{projects.length}</span> projet{projects.length > 1 ? 's' : ''} géré{projects.length > 1 ? 's' : ''} au total.
                                 </p>
                             </div>
                         )}
                     </div>
                 )}
                 {/* vue de performance des étudiants */}
-                {view === 'performance'&& (
+                {view === 'performance' && (
                     <MeritChart />
                     //    <AdminForum />
                 )}
@@ -1476,496 +1499,718 @@ const Dashboard: React.FC = () => {
 
                 {/* Modal de confirmation de suppression */}
                 <Transition appear show={isDeleteModalOpen} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={() => setIsDeleteModalOpen(false)}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                        >
-                            <div className="fixed inset-0 bg-black bg-opacity-25" />
-                        </Transition.Child>
-                        <div className="fixed inset-0 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                        <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
-                                            Confirmer la suppression
-                                        </Dialog.Title>
-                                        <div className="mt-2">
-                                            <p className="text-sm text-gray-500">
-                                                Êtes-vous sûr de vouloir supprimer ce {itemTypeToDelete === 'student' ? 'étudiant' : 'projet'} ? Cette action est irréversible.
-                                            </p>
-                                        </div>
-                                        <div className="mt-4 space-x-2 flex justify-between">
-                                            <button
-                                                type="button"
-                                                className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-                                                onClick={confirmDelete}
-                                            >
-                                                Supprimer
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                onClick={() => setIsDeleteModalOpen(false)}
-                                            >
-                                                Annuler
-                                            </button>
-                                        </div>
-                                    </Dialog.Panel>
-                                </Transition.Child>
+    {/* Z-index élevé (z-50) pour s'assurer que la modale est au-dessus des autres éléments */}
+    <Dialog as="div" className="relative z-50" onClose={() => setIsDeleteModalOpen(false)}>
+        
+        {/* Backdrop (Amélioré: sombre et flou) */}
+        <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            {/* Arrière-plan plus sombre et flou pour un effet moderne */}
+            <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    {/* Conteneur de la modale : max-w-sm (légèrement réduit) et padding p-6 */}
+                    <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+                        
+                        {/* Contenu de la modale */}
+                        <div className="sm:flex sm:items-start">
+                            {/* Icône de danger (Placeholder, nécessite une librairie d'icônes) */}
+                            <div className="mx-auto flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-12 sm:w-12">
+                                {/* Remplacez par votre icône de suppression/alerte (ex: <XCircleIcon className="h-6 w-6 text-red-600" />) */}
+                                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.857 3.375 2.75 3.375h13.71c1.892 0 3.614-1.875 2.748-3.375L15.378 3.84a1.725 1.725 0 00-3.003 0l-6.326 11.23a1.725 1.725 0 00-.001 1.764z" />
+                                </svg>
+                            </div>
+                            
+                            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                <Dialog.Title as="h3" className="text-xl font-bold leading-6 text-gray-900">
+                                    Confirmer la suppression
+                                </Dialog.Title>
+                                <div className="mt-2">
+                                    <p className="text-sm text-gray-500">
+                                        Voulez-vous vraiment supprimer {itemTypeToDelete === 'student' ? 'cet étudiant' : 'ce projet'} ? Cette action est irréversible et toutes les données associées seront perdues.
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </Dialog>
-                </Transition>
+
+                        {/* Boutons d'action (Positionnement modernisé : Annuler à gauche, Action à droite) */}
+                        <div className="mt-6 flex justify-end space-x-3">
+                            
+                            {/* Bouton Annuler (Secondaire) */}
+                            <button
+                                type="button"
+                                className="inline-flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition duration-150 ease-in-out"
+                                onClick={() => setIsDeleteModalOpen(false)}
+                            >
+                                Annuler
+                            </button>
+                            
+                            {/* Bouton Supprimer (Principal - Couleur Rouge) */}
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={loadindDelete}
+                                // Design de bouton plus large et plus pro
+                                className={`inline-flex justify-center rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out ${loadindDelete
+                                    ? 'bg-red-400 cursor-not-allowed' // État de chargement
+                                    : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2' // État normal
+                                }`}
+                            >
+                                {loadindDelete ? 'Suppression...' : 'Supprimer'}
+                            </button>
+                        </div>
+
+                    </Dialog.Panel>
+                </Transition.Child>
+            </div>
+        </div>
+    </Dialog>
+</Transition>
 
                 {/* Modal de création d'étudiant */}
                 <Transition appear show={isCreateStudentModalOpen} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={() => setIsCreateStudentModalOpen(false)}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                        >
-                            <div className="fixed inset-0 bg-black bg-opacity-25" />
-                        </Transition.Child>
-                        <div className="fixed inset-0 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                        <Dialog.Title as="h3" className="text-2xl font-bold leading-6 text-gray-900 mb-6">
-                                            Créer un nouvel étudiant
-                                        </Dialog.Title>
-                                        <form onSubmit={handleStudentFormSubmit} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Prénom</label>
-                                                <input
-                                                    type="text"
-                                                    name="first_name"
-                                                    value={formDataStudent.first_name}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                                <text></text>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Nom de famille</label>
-                                                <input
-                                                    type="text"
-                                                    name="last_name"
-                                                    value={formDataStudent.last_name}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Email</label>
-                                                <input
-                                                    type="email"
-                                                    name="email"
-                                                    value={formDataStudent.email}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
-                                                <input
-                                                    type="password"
-                                                    name="password"
-                                                    value={formDataStudent.password}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
-                                                <input
-                                                    type="text"
-                                                    name="student_id"
-                                                    value={formDataStudent.student_id}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Classe</label>
-                                                <select
-                                                    name="class_group"
-                                                    value={formDataStudent.class_group}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                >
-                                                    <option value="L1 Info">L1 Info</option>
-                                                    <option value="L2 Info">L2 Info</option>
-                                                    <option value="L3 Info">L3 Info</option>
-                                                </select>
-                                            </div>
-                                            <div className="mt-6 flex justify-end space-x-3">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                                                    onClick={() => setIsCreateStudentModalOpen(false)}
-                                                >
-                                                    Annuler
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className={`px-4 py-2 text-sm font-medium text-white rounded-md transition ${isSubmitting ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    {isSubmitting ? 'Création...' : 'Créer l’étudiant'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
+    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateStudentModalOpen(false)}>
+        {/* Backdrop (Assombrissement de l'arrière-plan) */}
+        <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                {/* Contenu de la modale */}
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
+                        
+                        {/* En-tête de la modale */}
+                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
+                            Créer un nouvel étudiant
+                        </Dialog.Title>
+                        <p className="text-sm text-gray-500 mb-6">
+                            Veuillez remplir tous les champs pour enregistrer un nouvel étudiant.
+                        </p>
+
+                        <form onSubmit={handleStudentFormSubmit} className="space-y-6">
+                            
+                            {/* Champs du formulaire */}
+                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                {/* Champ: Prénom */}
+                                <div>
+                                    {/* Utilisation de 'htmlFor' pour l'accessibilité */}
+                                    <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
+                                    <input
+                                        id="first_name"
+                                        type="text"
+                                        name="first_name"
+                                        value={formDataStudent.first_name}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        placeholder="Ex: Jean"
+                                        // Classes améliorées: plus de padding, border plus subtile, ombre au focus
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    />
+                                </div>
+                                
+                                {/* Champ: Nom de famille */}
+                                <div>
+                                    <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
+                                    <input
+                                        id="last_name"
+                                        type="text"
+                                        name="last_name"
+                                        value={formDataStudent.last_name}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        placeholder="Ex: Dupont"
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </Dialog>
-                </Transition>
+                            
+                            {/* Champ: Email */}
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value={formDataStudent.email}
+                                    onChange={handleStudentFormChange}
+                                    required
+                                    placeholder="Ex: jean.dupont@ecole.com"
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                />
+                            </div>
+                            
+                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                {/* Champ: Mot de passe */}
+                                <div>
+                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        value={formDataStudent.password}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        placeholder="Minimum 8 caractères"
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    />
+                                </div>
+
+                                {/* Champ: Matricule étudiant */}
+                                <div>
+                                    <label htmlFor="student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
+                                    <input
+                                        id="student_id"
+                                        type="text"
+                                        name="student_id"
+                                        value={formDataStudent.student_id}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        placeholder="Ex: S2025-4567"
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            
+                            {/* Champ: Classe */}
+                            <div>
+                                <label htmlFor="class_group" className="block text-sm font-medium text-gray-700">Classe</label>
+                                <select
+                                    id="class_group"
+                                    name="class_group"
+                                    value={formDataStudent.class_group}
+                                    onChange={handleStudentFormChange}
+                                    required
+                                    // Utilisation des mêmes classes de style pour l'uniformité
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                >
+                                    {/* Ajouter une option par défaut désactivée et non sélectionnable */}
+                                    <option value="" disabled>Sélectionner une classe</option>
+                                    <option value="L1 Info">L1 Info</option>
+                                    <option value="L2 Info">L2 Info</option>
+                                    <option value="L3 Info">L3 Info</option>
+                                </select>
+                            </div>
+                            
+                            {/* Boutons d'action */}
+                            <div className="pt-4 flex justify-end space-x-3">
+                                
+                                {/* Bouton Annuler (Secondaire) */}
+                                <button
+                                    type="button"
+                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                    onClick={() => setIsCreateStudentModalOpen(false)}
+                                >
+                                    Annuler
+                                </button>
+                                
+                                {/* Bouton Créer (Principal) */}
+                                <button
+                                    type="submit"
+                                    // Classes de bouton principal améliorées: couleur plus profonde, ombre
+                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
+                                        ? 'bg-indigo-400 cursor-not-allowed' // État de soumission
+                                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2' // État normal
+                                    }`}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Création en cours...' : 'Créer l’étudiant'}
+                                </button>
+                            </div>
+                        </form>
+                    </Dialog.Panel>
+                </Transition.Child>
+            </div>
+        </div>
+    </Dialog>
+</Transition>
 
                 {/* Modal de modification d'étudiant */}
                 <Transition appear show={isEditModalOpen} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={() => setIsEditModalOpen(false)}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                        >
-                            <div className="fixed inset-0 bg-black bg-opacity-25" />
-                        </Transition.Child>
-                        <div className="fixed inset-0 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                        <Dialog.Title as="h3" className="text-2xl font-bold leading-6 text-gray-900 mb-6">
-                                            Modifier l'étudiant
-                                        </Dialog.Title>
-                                        <form onSubmit={handleUpdateStudent} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Prénom</label>
-                                                <input
-                                                    type="text"
-                                                    name="first_name"
-                                                    value={formDataStudent.first_name}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Nom de famille</label>
-                                                <input
-                                                    type="text"
-                                                    name="last_name"
-                                                    value={formDataStudent.last_name}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
-                                                <input
-                                                    type="text"
-                                                    name="student_id"
-                                                    value={formDataStudent.student_id}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Classe</label>
-                                                <select
-                                                    name="class_group"
-                                                    value={formDataStudent.class_group}
-                                                    onChange={handleStudentFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                >
-                                                    <option value="L1 Info">L1 Info</option>
-                                                    <option value="L2 Info">L2 Info</option>
-                                                    <option value="L3 Info">L3 Info</option>
-                                                </select>
-                                            </div>
-                                            <div className="mt-6 flex justify-end space-x-3">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                                                    onClick={() => setIsEditModalOpen(false)}
-                                                >
-                                                    Annuler
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className="px-4 py-2 text-sm font-medium text-white rounded-md bg-blue-600 hover:bg-blue-700 transition"
+    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+    <Dialog as="div" className="relative z-50" onClose={() => setIsEditModalOpen(false)}>
+        
+        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+        <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        </Transition.Child>
 
-                                                    disabled={update}
-                                                >
-                                                    {update ? 'Mise à jour...' : 'Mise à jour'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
+        <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                
+                {/* Contenu de la modale */}
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    {/* Conteneur de la modale : max-w-lg, p-8, rounded-xl, shadow-2xl */}
+                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
+                        
+                        {/* En-tête de la modale */}
+                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
+                            Modifier l'étudiant
+                        </Dialog.Title>
+                        <p className="text-sm text-gray-500 mb-6">
+                            Mettez à jour les informations de l'étudiant.
+                        </p>
+
+                        <form onSubmit={handleUpdateStudent} className="space-y-6">
+                            
+                            {/* Grille pour les noms */}
+                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                {/* Champ: Prénom */}
+                                <div>
+                                    <label htmlFor="edit_first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
+                                    <input
+                                        id="edit_first_name"
+                                        type="text"
+                                        name="first_name"
+                                        value={formDataStudent.first_name}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                    />
+                                </div>
+                                
+                                {/* Champ: Nom de famille */}
+                                <div>
+                                    <label htmlFor="edit_last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
+                                    <input
+                                        id="edit_last_name"
+                                        type="text"
+                                        name="last_name"
+                                        value={formDataStudent.last_name}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </Dialog>
-                </Transition>
+                            
+                            {/* Grille pour Matricule et Classe */}
+                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                {/* Champ: Matricule étudiant */}
+                                <div>
+                                    <label htmlFor="edit_student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
+                                    <input
+                                        id="edit_student_id"
+                                        type="text"
+                                        name="student_id"
+                                        value={formDataStudent.student_id}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        // Rendre le matricule en lecture seule s'il sert d'identifiant permanent.
+                                        // Si vous voulez qu'il soit modifiable, retirez 'readOnly'
+                                        readOnly
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
+                                    />
+                                </div>
+                                
+                                {/* Champ: Classe */}
+                                <div>
+                                    <label htmlFor="edit_class_group" className="block text-sm font-medium text-gray-700">Classe</label>
+                                    <select
+                                        id="edit_class_group"
+                                        name="class_group"
+                                        value={formDataStudent.class_group}
+                                        onChange={handleStudentFormChange}
+                                        required
+                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                    >
+                                        <option value="" disabled>Sélectionner une classe</option>
+                                        <option value="L1 Info">L1 Info</option>
+                                        <option value="L2 Info">L2 Info</option>
+                                        <option value="L3 Info">L3 Info</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Optionnel: Champ pour changer le mot de passe (souvent géré séparément) */}
+                            {/* <div className="pt-2">
+                                <label htmlFor="edit_password" className="block text-sm font-medium text-gray-700">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                                <input
+                                    id="edit_password"
+                                    type="password"
+                                    name="password"
+                                    // Pas de 'value' pour le mot de passe dans un formulaire de modification
+                                    onChange={handleStudentFormChange}
+                                    placeholder="Nouveau mot de passe (optionnel)"
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                />
+                            </div>
+                            */}
+
+                            {/* Boutons d'action */}
+                            <div className="pt-4 flex justify-end space-x-3">
+                                
+                                {/* Bouton Annuler (Secondaire) */}
+                                <button
+                                    type="button"
+                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                >
+                                    Annuler
+                                </button>
+                                
+                                {/* Bouton Mise à jour (Principal - Couleur Bleue pour l'action principale) */}
+                                <button
+                                    type="submit"
+                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${update 
+                                        ? 'bg-blue-400 cursor-not-allowed' // État de soumission
+                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' // État normal
+                                    }`}
+                                    disabled={update}
+                                >
+                                    {update ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
+                                </button>
+                            </div>
+                        </form>
+                    </Dialog.Panel>
+                </Transition.Child>
+            </div>
+        </div>
+    </Dialog>
+</Transition>
 
                 {/* Modal de création de projet */}
                 <Transition appear show={isCreateProjectModalOpen} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={() => setIsCreateProjectModalOpen(false)}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                        >
-                            <div className="fixed inset-0 bg-black bg-opacity-25" />
-                        </Transition.Child>
-                        <div className="fixed inset-0 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                        <Dialog.Title as="h3" className="text-2xl font-bold leading-6 text-gray-900 mb-6">
-                                            Créer un nouveau projet
-                                        </Dialog.Title>
-                                        <form onSubmit={handleCreateProjectSubmit} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Nom du projet</label>
-                                                <input
-                                                    type="text"
-                                                    // name="name"
-                                                    name="title"
-                                                    value={formDataProject.title}
-                                                    onChange={handleProjectFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Description</label>
-                                                <textarea
-                                                    name="description"
-                                                    value={formDataProject.description}
-                                                    onChange={handleProjectFormChange}
-                                                    required
-                                                    rows={4}
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Sélectionner les étudiants
-                                                </label>
-                                                <div className="h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
-                                                    {students.length > 0 ? (
-                                                        students.map(student => (
-                                                            <div key={student.id} className="flex items-center space-x-2 py-1">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`student-${student.id}`}
-                                                                    name="student_ids"
-                                                                    checked={formDataProject.student_ids.includes(student.id)}
-                                                                    onChange={() => handleStudentSelection(student.id)}
-                                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                                />
-                                                                <label htmlFor={`student-${student.id}`} className="text-sm text-gray-700">
-                                                                    {student.user.name} ({student.student_id})
-                                                                </label>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-gray-500 text-center text-sm mt-4">
-                                                            Aucun étudiant disponible.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="mt-6 flex justify-end space-x-3">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                                                    onClick={() => setIsCreateProjectModalOpen(false)}
-                                                >
-                                                    Annuler
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className={`px-4 py-2 text-sm font-medium text-white rounded-md transition ${isSubmitting ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'}`}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    {isSubmitting ? 'Création...' : 'Créer le projet'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
-                            </div>
-                        </div>
-                    </Dialog>
-                </Transition>
+    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateProjectModalOpen(false)}>
+        
+        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+        <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            {/* Arrière-plan sombre et flou pour un effet professionnel */}
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        </Transition.Child>
 
+        <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                
+                {/* Contenu de la modale */}
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    {/* Conteneur de la modale : Largeur AUGMENTÉE à max-w-xl, padding maintenu à p-6 */}
+                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+                        
+                        {/* En-tête de la modale */}
+                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-1">
+                            Créer un nouveau projet
+                        </Dialog.Title>
+                        <p className="text-sm text-gray-500 mb-5">
+                            Définissez les détails du projet et assignez les étudiants concernés.
+                        </p>
+
+                        <form onSubmit={handleCreateProjectSubmit} className="space-y-4"> {/* Espace réduit à space-y-4 */}
+                            
+                            {/* Champ: Nom du projet (Titre) */}
+                            <div>
+                                <label htmlFor="project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
+                                <input
+                                    id="project_title"
+                                    type="text"
+                                    name="title"
+                                    value={formDataProject.title}
+                                    onChange={handleProjectFormChange}
+                                    required
+                                    placeholder="Ex: Système de gestion scolaire v2"
+                                    // Focus vert pour l'action de création
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
+                                />
+                            </div>
+                            
+                            {/* Champ: Description */}
+                            <div>
+                                <label htmlFor="project_description" className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea
+                                    id="project_description"
+                                    name="description"
+                                    value={formDataProject.description}
+                                    onChange={handleProjectFormChange}
+                                    required
+                                    rows={3} // Nombre de lignes réduit à 3 (Diminution de la hauteur)
+                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
+                                    // Focus vert
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
+                                />
+                            </div>
+                            
+                            {/* Sélection des étudiants */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Sélectionner les étudiants
+                                    <span className="ml-2 text-xs font-normal text-gray-500">(Sélectionnez un ou plusieurs étudiants)</span>
+                                </label>
+                                {/* Hauteur réduite pour compacter la modale */}
+                                <div className="h-36 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+                                    {students.length > 0 ? (
+                                        students.map(student => (
+                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`student-${student.id}`}
+                                                    name="student_ids"
+                                                    checked={formDataProject.student_ids.includes(student.id)}
+                                                    onChange={() => handleStudentSelection(student.id)}
+                                                    // Checkbox vert
+                                                    className="h-4 w-4 rounded text-green-600 focus:ring-green-500 border-gray-300"
+                                                />
+                                                <label htmlFor={`student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                                    {student.user.name} 
+                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
+                                                </label>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                            <p className="text-gray-500 text-sm">
+                                                Aucun étudiant disponible. Veuillez en créer un d'abord.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Boutons d'action */}
+                            <div className="pt-4 flex justify-end space-x-3">
+                                
+                                {/* Bouton Annuler (Secondaire) */}
+                                <button
+                                    type="button"
+                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                    onClick={() => setIsCreateProjectModalOpen(false)}
+                                >
+                                    Annuler
+                                </button>
+                                
+                                {/* Bouton Créer (Principal - Couleur Verte) */}
+                                <button
+                                    type="submit"
+                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
+                                        ? 'bg-green-400 cursor-not-allowed' // État de soumission
+                                        : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2' // État normal
+                                    }`}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Création en cours...' : 'Créer le projet'}
+                                </button>
+                            </div>
+                        </form>
+                    </Dialog.Panel>
+                </Transition.Child>
+            </div>
+        </div>
+    </Dialog>
+</Transition>
                 {/* Modal de modification de projet */}
                 <Transition appear show={isEditProjectModalOpen} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={() => setIsEditProjectModalOpen(false)}>
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
-                        >
-                            <div className="fixed inset-0 bg-black bg-opacity-25" />
-                        </Transition.Child>
-                        <div className="fixed inset-0 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                        <Dialog.Title as="h3" className="text-2xl font-bold leading-6 text-gray-900 mb-6">
-                                            Modifier le projet
-                                        </Dialog.Title>
-                                        <form onSubmit={handleUpdateProject} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Nom du projet</label>
-                                                <input
-                                                    type="text"
-                                                    // name="name"
-                                                    name="title"
-                                                    value={formDataProject.title}
-                                                    onChange={handleProjectFormChange}
-                                                    required
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Description</label>
-                                                <textarea
-                                                    name="description"
-                                                    value={formDataProject.description}
-                                                    onChange={handleProjectFormChange}
-                                                    required
-                                                    rows={4}
-                                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Sélectionner les étudiants
-                                                </label>
-                                                <div className="h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
-                                                    {students.length > 0 ? (
-                                                        students.map(student => (
-                                                            <div key={student.id} className="flex items-center space-x-2 py-1">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`edit-student-${student.id}`}
-                                                                    name="student_ids"
-                                                                    checked={formDataProject.student_ids.includes(student.id)}
-                                                                    onChange={() => handleStudentSelection(student.id)}
-                                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                                />
-                                                                <label htmlFor={`edit-student-${student.id}`} className="text-sm text-gray-700">
-                                                                    {student.user.name} ({student.student_id})
-                                                                </label>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-gray-500 text-center text-sm mt-4">
-                                                            Aucun étudiant disponible.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="mt-6 flex justify-end space-x-3">
-                                                <button
-                                                    type="button"
-                                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                                                    onClick={() => setIsEditProjectModalOpen(false)}
-                                                >
-                                                    Annuler
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className={`px-4 py-2 text-sm font-medium text-white rounded-md transition ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    {isSubmitting ? 'Mise à jour...' : 'Mettre à jour'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
+    {/* Z-index élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+    <Dialog as="div" className="relative z-50" onClose={() => setIsEditProjectModalOpen(false)}>
+        
+        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+        <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            {/* Arrière-plan sombre et flou pour un effet professionnel */}
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                
+                {/* Contenu de la modale */}
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    {/* Conteneur de la modale : Largeur max conservée à max-w-lg, padding réduit à p-6 */}
+                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+                        
+                        {/* En-tête de la modale */}
+                        {/* Marge inférieure réduite pour compacter l'espace */}
+                        <Dialog.Title as="h3" className="text-xl font-extrabold leading-tight text-gray-900 mb-1">
+                            Modifier le projet
+                        </Dialog.Title>
+                        <p className="text-sm text-gray-500 mb-5">
+                            Mettez à jour les détails du projet et gérez les étudiants assignés.
+                        </p>
+
+                        <form onSubmit={handleUpdateProject} className="space-y-4"> {/* Espace réduit à space-y-4 */}
+                            
+                            {/* Champ: Nom du projet (Titre) */}
+                            <div>
+                                <label htmlFor="edit_project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
+                                <input
+                                    id="edit_project_title"
+                                    type="text"
+                                    name="title"
+                                    value={formDataProject.title}
+                                    onChange={handleProjectFormChange}
+                                    required
+                                    placeholder="Ex: Système de gestion scolaire v2"
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                />
                             </div>
-                        </div>
-                    </Dialog>
-                </Transition>
+                            
+                            {/* Champ: Description */}
+                            <div>
+                                <label htmlFor="edit_project_description" className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea
+                                    id="edit_project_description"
+                                    name="description"
+                                    value={formDataProject.description}
+                                    onChange={handleProjectFormChange}
+                                    required
+                                    rows={3} // Nombre de lignes réduit à 3
+                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
+                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                />
+                            </div>
+                            
+                            {/* Sélection des étudiants */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Étudiants assignés
+                                    <span className="ml-2 text-xs font-normal text-gray-500">(Cochez ou décochez pour modifier la liste)</span>
+                                </label>
+                                {/* Hauteur réduite pour compacter la modale */}
+                                <div className="h-32 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+                                    {students.length > 0 ? (
+                                        students.map(student => (
+                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`edit-student-${student.id}`}
+                                                    name="student_ids"
+                                                    checked={formDataProject.student_ids.includes(student.id)}
+                                                    onChange={() => handleStudentSelection(student.id)}
+                                                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                />
+                                                <label htmlFor={`edit-student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                                    {student.user.name} 
+                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
+                                                </label>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                            <p className="text-gray-500 text-sm">
+                                                Aucun étudiant disponible.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Boutons d'action */}
+                            <div className="pt-4 flex justify-end space-x-3">
+                                
+                                {/* Bouton Annuler (Secondaire) */}
+                                <button
+                                    type="button"
+                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                    onClick={() => setIsEditProjectModalOpen(false)}
+                                >
+                                    Annuler
+                                </button>
+                                
+                                {/* Bouton Mettre à jour (Principal - Couleur Bleue) */}
+                                <button
+                                    type="submit"
+                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
+                                        ? 'bg-blue-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                                    }`}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
+                                </button>
+                            </div>
+                        </form>
+                    </Dialog.Panel>
+                </Transition.Child>
+            </div>
+        </div>
+    </Dialog>
+</Transition>
             </main>
         </div>
     );

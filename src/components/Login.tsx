@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+// import Login from './Login';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -12,14 +13,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, setShowLoginModal }) => {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Animation d'entrée pour le formulaire
-    document.querySelector('.login-container')?.classList.add('animate-in');
-    // onLoginSuccess()
-  }, [onLoginSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,215 +22,110 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, setShowLoginModal }) => {
 
     try {
       const response = await api.post('/login', { email, password });
-
       const { token, user } = response.data;
+
       localStorage.setItem('authToken', token);
       localStorage.setItem('authUser', JSON.stringify(user));
 
-      setMessage('Connexion réussie ! Redirection...');
-
-      // Ajout d'une animation de succès avant la redirection
-      document.querySelector('.login-form')?.classList.add('success-animation');
-
+      setMessage('Connexion réussie !');
       setTimeout(() => {
-        if (user.role === 'admin') {
-          navigate('/dashboard', { replace: true });
-        } else if (user.role === 'student') {
-          navigate('/student-dashboard', { replace: true });
-          console.log(user);
-        }
+        if (user.role === 'admin') navigate('/dashboard');
+        else navigate('/student-dashboard');
       }, 1000);
-
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Erreur de connexion:', error.message);
-        setMessage(error.message || 'Erreur lors de la connexion.');
-
-        // Animation d'erreur
-        const form = document.querySelector('.login-form');
-        form?.classList.add('error-shake');
-        setTimeout(() => form?.classList.remove('error-shake'), 500);
-      }
+    } catch (error: any) {
+      setMessage("Échec de la connexion. Vérifiez vos identifiants.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen from-indigo-50 to-purple-50 flex items-center justify-center p-4 login-container opacity-0 translate-y-5"  >
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:shadow-xl login-form">
-       
-          <button
-            className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
-            onClick={()=>{setShowLoginModal(false)}}
-            style={{
-              // left:400,
-              position:'relative',
-              fontSize:20,
-              fontWeight:'bold',
-            }}
-          >X</button>
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-indigo-700 mb-2">Connexion</h2>
-          <p className="text-gray-500">Accédez à votre espace personnel</p>
-        </div>
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm"
+      onClick={() => setShowLoginModal(false)} // clic en dehors
+    >
+      <div
+        className="bg-gray-800/95 rounded-2xl p-8 w-[90%] sm:w-96 relative shadow-2xl border border-indigo-500/30 animate-slideUp"
+        onClick={(e) => e.stopPropagation()} // empêche la fermeture au clic dedans
+      >
+        {/* Bouton de fermeture */}
+        <button
+          onClick={() => setShowLoginModal(false)}
+          className="absolute top-3 right-3 text-gray-400 hover:text-indigo-400 transition"
+        >
+          ✕
+        </button>
 
+        {/* En-tête */}
+        <h3 className="text-2xl font-bold mb-6 text-center text-indigo-400">
+          Connexion
+        </h3>
+
+        {/* Message */}
         {message && (
-          <div className={`mt-4 p-3 rounded-lg text-center transition-all duration-300 ${message.includes('réussie') ? 'bg-green-100 text-green-700 animate-pulse' : 'bg-red-100 text-red-700'}`}>
+          <div
+            className={`text-center mb-4 py-2 rounded-md text-sm ${
+              message.includes('réussie')
+                ? 'bg-green-600/30 text-green-300'
+                : 'bg-red-600/30 text-red-300'
+            }`}
+          >
             {message}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          <div className="relative">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="pl-10 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                placeholder="votre@email.com"
-              />
-            </div>
-          </div>
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+          <input
+            type="email"
+            placeholder="Adresse e-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400"
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400"
+          />
 
-          <div className="relative">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Mot de passe
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="pl-10 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                placeholder="Votre mot de passe"
-              />
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Connexion...
-                </>
-              ) : 'Se connecter'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 rounded-lg mt-2 transition-all duration-200 shadow-md disabled:opacity-70"
+          >
+            {isLoading ? 'Connexion...' : 'Se connecter'}
+          </button>
         </form>
 
-        <div className="mt-8">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <button
-                type="button"
-                onClick={() => setShowDemo(!showDemo)}
-                className="px-3 py-1 bg-white text-sm text-gray-500 hover:text-indigo-600 transition-colors duration-200"
-              >
-                {showDemo ? 'Masquer' : 'Afficher'} les informations de démonstration
-              </button>
-            </div>
+        {/* Infos de démonstration */}
+        {/* <div className="mt-6 text-center">
+          <p className="text-gray-400 text-sm mb-2">Exemples :</p>
+          <div className="bg-gray-700 p-3 rounded-lg text-gray-300 text-xs">
+            <p><strong>Admin :</strong> admin@example.com</p>
+            <p><strong>Étudiant :</strong> student@example.com</p>
+            <p><strong>Mot de passe :</strong> password</p>
           </div>
-
-          {showDemo && (
-            <div className="mt-4 bg-gray-50 p-4 rounded-lg animate-fade-in">
-              <p className="text-sm text-gray-600 mb-2 font-medium">Comptes de démonstration :</p>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-indigo-50 p-3 rounded-md">
-                  <p className="text-xs text-indigo-700">
-                    <strong>Admin:</strong> admin@example.com<br />
-                    <strong>Mot de passe:</strong> password
-                  </p>
-                </div>
-                <div className="bg-purple-50 p-3 rounded-md">
-                  <p className="text-xs text-purple-700">
-                    <strong>Étudiant:</strong> student@example.com<br />
-                    <strong>Mot de passe:</strong> password
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        </div> */}
       </div>
 
       <style>{`
-        .login-container.animate-in {
-          animation: fadeInUp 0.6s ease-out forwards;
-        }
-        
-        .login-form.success-animation {
-          animation: successPulse 1.5s ease-in-out;
-        }
-        
-        .error-shake {
-          animation: shake 0.5s ease-in-out;
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-        
-        @keyframes fadeInUp {
-          0% {
+        @keyframes slideUp {
+          from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(20px) scale(0.98);
           }
-          100% {
+          to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
-        
-        @keyframes successPulse {
-          0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
-          50% { box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
-        }
-        
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%, 60% { transform: translateX(-8px); }
-          40%, 80% { transform: translateX(8px); }
-        }
-        
-        @keyframes fadeIn {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out forwards;
         }
       `}</style>
     </div>

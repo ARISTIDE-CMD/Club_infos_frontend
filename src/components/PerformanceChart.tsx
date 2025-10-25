@@ -176,7 +176,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ projectsData, class
     }
 
     return (
-        <div className="p-4 bg-white rounded-xl shadow-lg border border-gray-100">
+        <div className="p-4 bg-white rounded-xl  border border-gray-100">
             {/* Définition d'une hauteur fixe pour que le graphique soit beau avec maintainAspectRatio: false */}
             <div style={{ height: '400px', width: '100%' }}> 
                 <Line data={chartData} options={chartOptions} />

@@ -371,7 +371,7 @@ const StudentDashboard: React.FC = () => {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md">
+        <div className="bg-white p-8 rounded-2xl  text-center max-w-md">
           <span className="text-6xl mb-4">😞</span>
           <p className="text-xl text-red-500 font-bold mb-4">{error}</p>
           <button
@@ -388,7 +388,7 @@ const StudentDashboard: React.FC = () => {
   if (!student) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md">
+        <div className="bg-white p-8 rounded-2xl  text-center max-w-md">
           <span className="text-6xl mb-4">👤</span>
           <p className="text-xl text-gray-500 font-semibold">
             Aucun profil d'étudiant disponible.
@@ -421,7 +421,7 @@ const StudentDashboard: React.FC = () => {
         {/* --------------------------------------------------------------------------------
     HEADER : Tableau de bord étudiant
     -------------------------------------------------------------------------------- */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 mb-10">
+        <div className="bg-white rounded-2xl  border border-gray-100 p-6 sm:p-8 mb-10 w-full">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
 
             {/* 1. Titre et Informations Principales */}
@@ -437,7 +437,7 @@ const StudentDashboard: React.FC = () => {
             {/* 2. Bouton de Déconnexion (Alignement vertical au centre) */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-base transition-colors duration-300 hover:bg-red-700 shadow-lg shrink-0"
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-base transition-colors duration-300 hover:bg-red-700 shrink-0"
               disabled={loadingLogOut}
             >
               <svg
@@ -526,7 +526,7 @@ const StudentDashboard: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
           {/* Soumission de projet */}
-          <div className="xl:col-span-1 bg-white rounded-xl shadow-lg p-6 h-fit sticky top-10 border border-blue-100">
+          <div className="xl:col-span-1 bg-white rounded-xl  p-6 h-fit sticky top-10 border border-blue-100">
             <h3 className="text-2xl font-bold text-blue-700 mb-5 flex items-center gap-2 border-b pb-3">
               <span>📤</span>
               Soumettre un projet
@@ -580,7 +580,7 @@ const StudentDashboard: React.FC = () => {
               <button
                 type="submit"
                 disabled={uploading || !selectedProjectId || !selectedFile}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform shadow-md flex items-center justify-center gap-2 ${uploading || !selectedProjectId || !selectedFile
+                className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform flex items-center justify-center gap-2 ${uploading || !selectedProjectId || !selectedFile
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
                   }`}
@@ -601,7 +601,7 @@ const StudentDashboard: React.FC = () => {
           </div>
 
           {/* Projets assignés */}
-          <div className="xl:col-span-2 bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+          <div className="xl:col-span-2 bg-white rounded-xl  p-6 border border-indigo-100">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-3">
               <span>📋</span>
               Mes Projets Assignés
