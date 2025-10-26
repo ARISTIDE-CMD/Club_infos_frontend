@@ -37,7 +37,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ submissionId, onEvaluat
           max="20"
           value={grade}
           onChange={(e) => setGrade(e.target.value === "" ? "" : Number(e.target.value))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-green-400 focus:border-green-400 outline-none transition resize-none hover:border-green-300"
         />
       </div>
 
@@ -47,7 +47,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ submissionId, onEvaluat
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-green-400 focus:border-green-400 outline-none transition resize-none hover:border-green-300"
         />
       </div>
 

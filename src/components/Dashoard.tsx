@@ -1139,11 +1139,11 @@ const Dashboard: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-800 l-20" style={{ left: 20 }}>
                             {view === 'students' ? "Tableau de bord Étudiants" : ""}
                             {view === 'projects' ? "Tableau de bord Projets" : ""}
-                            {view === 'results' ? "Tableau de résutats des projets" : ""}
+                            {/* {view === 'results' ? "Tableau de résutats des projets" : ""} */}
                         </h1>
                         <p className="text-gray-500">
                             {view === 'students' ? "Gestion des étudiants inscrits" : ""}
-                            {view === 'results' ? 'Correction des projets des étudiants' : ''}
+                            {/* {view === 'results' ? 'Correction des projets des étudiants' : ''} */}
                             {view === 'projects' ? 'Gestion des projets de groupe' : ''}
                             {/* {view == 'forum'? 'Cette fonctionnalité est en cours de développement':''} */}
 
