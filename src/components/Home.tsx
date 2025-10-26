@@ -21,7 +21,7 @@ export default function HomePage() {
         <img
           src="/src/assets/images/ChatGPT Image 25 oct. 2025, 10_21_41.png"
           alt="Logo Club Informatique"
-          className="w-12 h-12 rounded-full shadow-md object-cover border border-indigo-400/40"
+          className="w-12 h-12 rounded-full shadow-md object-cover border-indigo-400/40"
         />
         <h1 className="text-2xl md:text-3xl font-bold tracking-wide text-indigo-400 drop-shadow-md">
           Club Informatique

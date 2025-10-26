@@ -69,6 +69,7 @@ interface SubmissionItemProps {
     durationDays: number;
     durationHours: number;
     durationsMinut: number;
+    onArchiveToggle: (id: number) => void;
 }
 
 
@@ -78,7 +79,8 @@ const Dashboard: React.FC = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
-    const [archive, setArchive] = useState<boolean>(false);
+    const [archivedSubmissions, setArchivedSubmissions] = useState<Submission[]>([]);
+    // const [archive, setArchive] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
     const [loadingProject, setLoadingProjet] = useState<boolean>(true)
     const [loadingSoumission, setLoadingSoumission] = useState<boolean>(false)
@@ -98,7 +100,8 @@ const Dashboard: React.FC = () => {
     const [isLoadingLogout, setIsloadinLogout] = useState<boolean>(false)
     const [filtered, setFiltered] = useState<Submission[]>([])
     const [grade, setGrade] = useState<number>();
-    const [loadindDelete,setLoadingDelete]=useState<boolean>(false)
+    const [loadindDelete, setLoadingDelete] = useState<boolean>(false)
+
     // const [comment, setComment] = useState<string>(submissions.evaluation?.comment ?? '');
     const [formDataStudent, setFormDataStudent] = useState({
         first_name: "",
@@ -109,17 +112,17 @@ const Dashboard: React.FC = () => {
         class_group: "L1 Info",
     });
 
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [loadingChart, setLoadingChart] = useState(true);
-    const [error, setError] = useState("");
+    // const [chartData, setChartData] = useState<any[]>([]);
+    // const [loadingChart, setLoadingChart] = useState(true);
+    // const [error, setError] = useState("");
 
-    const data = [
-        { name: "Jan", valeur: 400 },
-        { name: "Fév", valeur: 300 },
-        { name: "Mar", valeur: 500 },
-        { name: "Avr", valeur: 200 },
-        { name: "Mai", valeur: 700 },
-    ];
+    // const data = [
+    //     { name: "Jan", valeur: 400 },
+    //     { name: "Fév", valeur: 300 },
+    //     { name: "Mar", valeur: 500 },
+    //     { name: "Avr", valeur: 200 },
+    //     { name: "Mai", valeur: 700 },
+    // ];
     // const filterData=dataSet.filter((value,_)=>{
     //     value.submission.
     // })
@@ -141,47 +144,95 @@ const Dashboard: React.FC = () => {
 
 
     // Fonction pour charger le graphe des étudiants depuis l'API
-    const fetchChartData = async () => {
+    // const fetchChartData = async () => {
+    //     try {
+    //         const token = localStorage.getItem("authToken");
+    //         if (!token) {
+    //             setError("Non autorisé. Veuillez vous connecter.");
+    //             setLoading(false);
+    //             return;
+    //         }
+
+    //         // 🔸 Récupération des données
+    //         const response = await api.get("/students", {
+    //             headers: { Authorization: `Bearer ${token}` },
+    //         });
+
+    //         const students = response.data.students || [];
+
+    //         // 🔸 Transformation des données pour le graphe
+    //         const formattedData: React.SetStateAction<any[]> = [];
+
+    //         students.forEach((student) => {
+    //             student.projects?.forEach((project) => {
+    //                 const evaluation = project.submission?.evaluation;
+    //                 if (evaluation) {
+    //                     formattedData.push({
+    //                         etudiant: `${student.first_name} ${student.last_name}`,
+    //                         projet: project.title,
+    //                         note: parseFloat(evaluation.grade),
+    //                     });
+    //                 }
+    //             });
+    //         });
+
+    //         setChartData(formattedData);
+    //         console.log("✅ Données du graphe :", formattedData);
+    //     } catch (err) {
+    //         console.error("Erreur lors du chargement du graphe :", err);
+    //         setError("Erreur lors du chargement du graphe.");
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
+
+    const toggleArchive = (id: number) => {
+        // Normalise id
+        const numericId = Number(id);
+        if (Number.isNaN(numericId)) return console.error('ID invalide pour toggleArchive:', id);
+
+        const archivedIdsRaw = localStorage.getItem('archivedSubmissions') || '[]';
+        let archivedIds: number[] = [];
         try {
-            const token = localStorage.getItem("authToken");
-            if (!token) {
-                setError("Non autorisé. Veuillez vous connecter.");
-                setLoading(false);
-                return;
+            archivedIds = JSON.parse(archivedIdsRaw).map((x: any) => Number(x)).filter((n: number) => !Number.isNaN(n));
+        } catch (e) {
+            archivedIds = [];
+        }
+
+        const isArchived = archivedIds.includes(numericId);
+
+        if (isArchived) {
+            // Désarchiver
+            const updated = archivedIds.filter(x => x !== numericId);
+            localStorage.setItem('archivedSubmissions', JSON.stringify(updated));
+
+            const item = archivedSubmissions.find(s => Number(s.id) === numericId);
+            if (item) {
+                setArchivedSubmissions(prev => prev.filter(s => Number(s.id) !== numericId));
+                setSubmissions(prev => [...prev, { ...item, archiv: false }]);
+            } else {
+                // fallback : si item non trouvé dans archivedSubmissions, on rafraîchit depuis l'API
+                console.warn('Item not found in archivedSubmissions when unarchiving, refetching.');
+                fetchSubmissions();
             }
+        } else {
+            // Archiver
+            const updated = [...archivedIds, numericId];
+            localStorage.setItem('archivedSubmissions', JSON.stringify(updated));
 
-            // 🔸 Récupération des données
-            const response = await api.get("/students", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            const students = response.data.students || [];
-
-            // 🔸 Transformation des données pour le graphe
-            const formattedData: React.SetStateAction<any[]> = [];
-
-            students.forEach((student) => {
-                student.projects?.forEach((project) => {
-                    const evaluation = project.submission?.evaluation;
-                    if (evaluation) {
-                        formattedData.push({
-                            etudiant: `${student.first_name} ${student.last_name}`,
-                            projet: project.title,
-                            note: parseFloat(evaluation.grade),
-                        });
-                    }
-                });
-            });
-
-            setChartData(formattedData);
-            console.log("✅ Données du graphe :", formattedData);
-        } catch (err) {
-            console.error("Erreur lors du chargement du graphe :", err);
-            setError("Erreur lors du chargement du graphe.");
-        } finally {
-            setLoading(false);
+            const item = submissions.find(s => Number(s.id) === numericId);
+            if (item) {
+                setSubmissions(prev => prev.filter(s => Number(s.id) !== numericId));
+                setArchivedSubmissions(prev => [...prev, { ...item, archiv: true }]);
+            } else {
+                // fallback : si item non trouvé dans submissions, refetch
+                console.warn('Item not found in submissions when archiving, refetching.');
+                fetchSubmissions();
+            }
         }
     };
+
 
 
     // Fonction pour gérer l'évaluation d'un projet
@@ -335,45 +386,89 @@ const Dashboard: React.FC = () => {
             setLoadingProjet(false)
         }
     };
+
+    // Recharger les projets soumis
     const fetchSubmissions = async () => {
         try {
-            // Afficher le loading
-            // setLoading(true);
+            // setLoadingSoumission(true);
 
-            // Appel API pour récupérer les soumissions
-            const response = await api.get('/results'); // Adaptez l'URL selon votre route
+            const response = await api.get('/results');
 
-            if (response.data.success) {
-                // Mettre à jour l'état avec les soumissions récupérées
-                setSubmissions(response.data.submissions);
-                console.log("submissions ", response.data.submissions);
-            } else {
-                console.error('Erreur lors de la récupération des soumissions:', response.data.message);
-                // Optionnel : afficher un message d'erreur à l'utilisateur
+            if (!response.data.success) {
+                console.error('Erreur API (success false):', response.data.message);
+                setSubmissions([]);
+                setArchivedSubmissions([]);
+                return;
             }
+
+            const allSubmissions: any[] = response.data.submissions || [];
+            console.log('API submissions:', allSubmissions.length, allSubmissions.map(s => s.id));
+
+            // Récupère les IDs archivés et normalise en number (protection contre strings)
+            let archivedIdsRaw = localStorage.getItem('archivedSubmissions');
+            let archivedIds: number[] = [];
+            try {
+                archivedIds = JSON.parse(archivedIdsRaw || '[]').map((id: any) => Number(id)).filter((n: number) => !Number.isNaN(n));
+            } catch (e) {
+                console.warn('archivedSubmissions mal formé dans localStorage, réinitialisation.', archivedSubmissionsRaw);
+                archivedIds = [];
+            }
+
+            console.log('archivedIds (normalisés):', archivedIds);
+
+            // Garde seulement les IDs valides (présents dans la réponse API)
+            const validArchivedIds = archivedIds.filter(id => allSubmissions.some(s => Number(s.id) === id));
+
+            // Si certains IDs n'existent plus, on met à jour localStorage
+            if (validArchivedIds.length !== archivedIds.length) {
+                console.warn('localStorage contenait des IDs invalides — mise à jour.');
+                localStorage.setItem('archivedSubmissions', JSON.stringify(validArchivedIds));
+            }
+
+            // Séparation
+            const archived = allSubmissions.filter(s => validArchivedIds.includes(Number(s.id))).map(s => ({ ...s, archiv: true }));
+            const active = allSubmissions.filter(s => !validArchivedIds.includes(Number(s.id))).map(s => ({ ...s, archiv: false }));
+
+            // Si tout est vide (bug), on applique une récupération sécurisée :
+            if (archived.length === 0 && active.length === 0 && allSubmissions.length > 0) {
+                // cas rare : peut venir d'un problème de matching => on essaye de réinitialiser localStorage
+                console.warn('Alerte : both archived & active are empty after separation. Réinitialisation safe.');
+                // Par sécurité, on met tout en "active"
+                setSubmissions(allSubmissions.map(s => ({ ...s, archiv: false })));
+                setArchivedSubmissions([]);
+                // et on corrige localStorage
+                localStorage.setItem('archivedSubmissions', JSON.stringify([]));
+                return;
+            }
+
+            setSubmissions(active);
+            setArchivedSubmissions(archived);
+
+            console.log('Submissions after separation — active:', active.length, 'archived:', archived.length);
         } catch (error) {
-            console.error('Erreur API:', error);
+            console.error('Erreur fetchSubmissions:', error);
             setSubmissions([]);
-            // Gestion des erreurs (afficher un message, etc.)
+            setArchivedSubmissions([]);
         } finally {
-            // setLoading(false);
             setLoadingSoumission(false);
         }
     };
-    const archivage = (id) => {
-        console.log("items", id)
-        setArchive(!archive)
-        // const filt=submissions.filter(submission=>submission.id!==id)
-        setFiltered(prev =>
-            prev.includes(id)
-                ? prev.filter(f => f !== id) // retire si déjà actif
-                : [...prev, id])
-        // console.log("filtre",filt)
-        const archived = submissions.filter(submission => submission.id === id)
-        setSubmissionToArchive(archived)
-        console.log("sub", submissionToArchive.length)
-    }
-    const filtre = submissions
+
+
+
+    // const archivage = (id) => {
+    //     console.log("items", id)
+    //     setArchive(!archive)
+    //     // const filt=submissions.filter(submission=>submission.id!==id)
+    //     setFiltered(prev =>
+    //         prev.includes(id)
+    //             ? prev.filter(f => f !== id) // retire si déjà actif
+    //             : [...prev, id])
+    //     // console.log("filtre",filt)
+    //     const archived = submissions.filter(submission => submission.id === id)
+    //     setSubmissionToArchive(archived)
+    //     console.log("sub", submissionToArchive.length)
+    // }
     useEffect(() => {
         fetchStudents();
         if (view === 'results' || view === 'archive')
@@ -417,7 +512,7 @@ const Dashboard: React.FC = () => {
     };
 
     const confirmDelete = async () => {
-        setLoadingDelete(ture)
+        setLoadingDelete(true)
         if (itemTypeToDelete === 'student') {
             await confirmDeleteStudent();
         } else if (itemTypeToDelete === 'project') {
@@ -592,7 +687,7 @@ const Dashboard: React.FC = () => {
                 }
             }, 1000)
             setIsCreateProjectModalOpen(false);
-            setFormDataProject({ title: "", description: "", student_ids: [] });
+
             fetchProjects(); // Recharger la liste des projets
         } catch (error) {
             console.error("Erreur lors de la création du projet:", error);
@@ -607,6 +702,7 @@ const Dashboard: React.FC = () => {
             }, 1000)
         } finally {
             setIsSubmitting(false);
+            setFormDataProject({ title: "", description: "", student_ids: [] });
         }
     };
 
@@ -668,14 +764,7 @@ const Dashboard: React.FC = () => {
                     clearInterval(intervall)
                 }
             }, 1000)
-            setFormDataStudent({
-                first_name: "",
-                last_name: "",
-                email: "",
-                password: "",
-                student_id: "",
-                class_group: "L1 Info",
-            });
+
             setIsCreateStudentModalOpen(false);
             fetchStudents(); // Recharger la liste des étudiants
         } catch (error) {
@@ -684,9 +773,17 @@ const Dashboard: React.FC = () => {
             // setMessage("Erreur lors de l'ajout de l'étudiant."+error);
         } finally {
             setIsSubmitting(false);
+            setFormDataStudent({
+                first_name: "",
+                last_name: "",
+                email: "",
+                password: "",
+                student_id: "",
+                class_group: "L1 Info",
+            });
         }
     };
-    const handleDownload = async (filePath: string, title: string) => {
+    const handleDownload = async (filePath: string) => {
         setDownload(true)
         try {
             const token = localStorage.getItem('authToken');
@@ -718,7 +815,7 @@ const Dashboard: React.FC = () => {
         student.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.class_group.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const SubmissionItem: React.FC<SubmissionItemProps> = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours, durationsMinut }) => {
+    const SubmissionItem: React.FC<SubmissionItemProps> = ({ submission, projectCreatedAt, submissionCreatedAt, durationDays, durationHours, durationsMinut, onArchiveToggle }) => {
         const [isExpanded, setIsExpanded] = useState(false);
 
         return (
@@ -788,20 +885,23 @@ const Dashboard: React.FC = () => {
                         </div>
                         {/* Bouton Archiver/Désarchiver */}
                         <button
-                            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${archive
+                            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${submission.archiv
                                 ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
                                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                                 }`}
                             onClick={(e) => {
-                                e.stopPropagation(); // Empêche l'expansion/rétraction de la ligne
-                                archivage(submission.id);
+                                e.stopPropagation();
+                                onArchiveToggle(submission.id); // 👈 Appel direct
                             }}
                         >
                             <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8M9 17h6"></path></svg>
-                                {archive ? 'Désarchiver' : 'Archiver'}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8M9 17h6" />
+                                </svg>
+                                {submission.archiv ? 'Désarchiver' : 'Archiver'}
                             </span>
                         </button>
+
                     </div>
                 </div>
 
@@ -915,25 +1015,25 @@ const Dashboard: React.FC = () => {
 
                 {/* LOGO & TITRE */}
                 <div className="px-4 py-4 text-2xl font-extrabold border-b border-gray-700/50">
-    <div className="flex items-center gap-3">
-        {/* Icône SVG représentant le code/développement (Chevrons pour les balises) */}
-        <svg 
-            className="w-7 h-7 text-indigo-400" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24" 
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            {/* Balises (Code) */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-        </svg>
-        
-        {/* Texte du Club Informatique */}
-        <span className="text-white tracking-wider">
-            Club <span className="text-indigo-400">Informatique</span>
-        </span>
-    </div>
-</div>
+                    <div className="flex items-center gap-3">
+                        {/* Icône SVG représentant le code/développement (Chevrons pour les balises) */}
+                        <svg
+                            className="w-7 h-7 text-indigo-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            {/* Balises (Code) */}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+
+                        {/* Texte du Club Informatique */}
+                        <span className="text-white tracking-wider">
+                            Club <span className="text-indigo-400">Informatique</span>
+                        </span>
+                    </div>
+                </div>
 
                 {/* NAVIGATION PRINCIPALE */}
                 <div className="flex-1 mt-8 space-y-2">
@@ -1097,12 +1197,98 @@ const Dashboard: React.FC = () => {
                                     <p className="text-lg text-gray-600">Chargement des projets archivés...</p>
                                 </div>
                             </div>
-                        ) : submissions && submissions.length > 0 ? (
+                        ) : archivedSubmissions && archivedSubmissions.length > 0 ? (
                             <div className="space-y-6">
                                 <div className="text-center">
                                     <h3 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-3 mb-2">
                                         <span className="text-4xl">📤</span>
                                         Projets archivés
+                                        <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-lg">
+                                            {archivedSubmissions.length}
+                                        </span>
+                                    </h3>
+                                    <p className="text-gray-600">Gestion et évaluation des projets soumis par les étudiants</p>
+                                </div>
+
+                                {/* Liste des projets rendus */}
+                                <div className="grid gap-6">
+                                    {archivedSubmissions
+                                        .sort((a, b) => {
+                                            const dateA = new Date(a.project?.created_at ?? 0).getTime();
+                                            const dateB = new Date(b.project?.created_at ?? 0).getTime();
+                                            return dateB - dateA; // du plus ancien au plus récent
+                                        })
+                                        .map(submission => {
+                                            // Calcul de la durée entre création du projet et soumission
+                                            const projectCreatedAt = new Date(submission.project?.created_at ?? "")
+                                            const submissionCreatedAt = new Date(submission.created_at);
+                                            const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
+
+                                            const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+                                            const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                            // CORRECTION APPORTÉE : on utilise le modulo sur l'heure (1000 * 60 * 60)
+                                            const durationsMinut = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                                            return (
+                                                <SubmissionItem
+                                                    key={submission.id}
+                                                    submission={submission}
+                                                    projectCreatedAt={projectCreatedAt}
+                                                    submissionCreatedAt={submissionCreatedAt}
+                                                    durationDays={durationDays}
+                                                    durationHours={durationHours}
+                                                    durationsMinut={durationsMinut}
+                                                    onArchiveToggle={toggleArchive}
+                                                />
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="text-center">
+                                    {/* Icône adaptée selon le contexte */}
+                                    <span className="text-8xl mb-4 block">
+                                        {loadingSoumission ? "⏳" : view === "archive" ? "📭" : "📂"}
+                                    </span>
+
+                                    {/* Titre principal */}
+                                    <h3 className="text-2xl font-bold text-gray-700 mb-2">
+                                        {loadingSoumission
+                                            ? "Chargement des projets..."
+                                            : view === "archive"
+                                                ? "Aucun projet archivé"
+                                                : "Aucun projet soumis"}
+                                    </h3>
+
+                                    {/* Texte secondaire */}
+                                    <p className="text-gray-500">
+                                        {loadingSoumission
+                                            ? "Veuillez patienter pendant le chargement des projets."
+                                            : view === "archive"
+                                                ? "Les projets archivés apparaîtront ici après leur archivage."
+                                                : "Les projets soumis par les étudiants apparaîtront ici une fois disponibles."}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {view === 'results' && (
+                    <div>
+                        {loadingSoumission ? (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                                    <p className="text-lg text-gray-600">Chargement des projets rendus...</p>
+                                </div>
+                            </div>
+                        ) : submissions && submissions.length > 0 ? (
+                            <div className="space-y-6" >
+                                <div className="text-center">
+                                    <h3 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-3 mb-2">
+                                        <span className="text-4xl">📤</span>
+                                        Projets Déposés
                                         <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-lg">
                                             {submissions.length}
                                         </span>
@@ -1112,7 +1298,7 @@ const Dashboard: React.FC = () => {
 
                                 {/* Liste des projets rendus */}
                                 <div className="grid gap-6">
-                                    {filtre
+                                    {submissions
                                         .sort((a, b) => {
                                             const dateA = new Date(a.project?.created_at ?? 0).getTime();
                                             const dateB = new Date(b.project?.created_at ?? 0).getTime();
@@ -1138,69 +1324,10 @@ const Dashboard: React.FC = () => {
                                                     durationDays={durationDays}
                                                     durationHours={durationHours}
                                                     durationsMinut={durationsMinut}
+                                                    onArchiveToggle={toggleArchive}
                                                 />
                                             );
                                         })}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex justify-center items-center py-20">
-                                <div className="text-center">
-                                    <span className="text-8xl mb-4">📭</span>
-                                    <h3 className="text-2xl font-bold text-gray-600 mb-2">Aucun projet rendu</h3>
-                                    <p className="text-gray-500">Les projets soumis par les étudiants apparaîtront ici.</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-                {view === 'results' && (
-                    <div>
-                        {loadingSoumission ? (
-                            <div className="flex justify-center items-center py-20">
-                                <div className="text-center">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                                    <p className="text-lg text-gray-600">Chargement des projets rendus...</p>
-                                </div>
-                            </div>
-                        ) : filtre && filtre.length > 0 ? (
-                            <div className="space-y-6" >
-                                <div className="text-center">
-                                    <h3 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-3 mb-2">
-                                        <span className="text-4xl">📤</span>
-                                        Projets Déposés
-                                        <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-lg">
-                                            {submissions.length}
-                                        </span>
-                                    </h3>
-                                    <p className="text-gray-600">Gestion et évaluation des projets soumis par les étudiants</p>
-                                </div>
-
-                                {/* Liste des projets rendus */}
-                                <div className="grid gap-6">
-                                    {submissions.map(submission => {
-                                        // Calcul de la durée entre création du projet et soumission
-                                        const projectCreatedAt = new Date(submission.project?.created_at ?? "")
-                                        const submissionCreatedAt = new Date(submission.created_at);
-                                        const durationMs = new Date(submissionCreatedAt).getTime() - new Date(projectCreatedAt).getTime();
-
-                                        const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
-                                        const durationHours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                        // CORRECTION APPORTÉE : on utilise le modulo sur l'heure (1000 * 60 * 60)
-                                        const durationsMinut = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-
-                                        return (
-                                            <SubmissionItem
-                                                key={submission.id}
-                                                submission={submission}
-                                                projectCreatedAt={projectCreatedAt}
-                                                submissionCreatedAt={submissionCreatedAt}
-                                                durationDays={durationDays}
-                                                durationHours={durationHours}
-                                                durationsMinut={durationsMinut}
-                                            />
-                                        );
-                                    })}
                                 </div>
                             </div>
                         ) : (
@@ -1252,10 +1379,10 @@ const Dashboard: React.FC = () => {
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
-                                                Prénom
+                                                Nom
                                             </th>
                                             <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
-                                                Nom
+                                                Prénom
                                             </th>
                                             <th className="py-3.5 px-6 text-left font-semibold text-gray-600 uppercase tracking-wider text-xs border-b border-gray-200">
                                                 Matricule
@@ -1275,10 +1402,9 @@ const Dashboard: React.FC = () => {
                                                 // La fonction de tri (sort) semble trier une variable par elle-même (var1 - var2),
                                                 // j'ai conservé la structure mais je vous conseille de la revoir pour trier par nom (e.g. var1.localeCompare(var2))
                                                 .sort((a, b) => {
-                                                    // Logique de tri à revoir : actuellement trie une variable par elle-même
-                                                    const var1 = a.first_name;
-                                                    const var2 = a.first_name;
-                                                    return var1 - var2
+                                                    const lastNameCompare = a.last_name.localeCompare(b.last_name);
+                                                    if (lastNameCompare !== 0) return lastNameCompare;
+                                                    return a.first_name.localeCompare(b.first_name);
                                                 })
                                                 .map((s, index) => {
                                                     const [firstName, ...lastNameParts] = s.user.name.split(" ");
@@ -1291,10 +1417,10 @@ const Dashboard: React.FC = () => {
                                                             style={{ animationDelay: `${index * 50}ms` }}
                                                         >
                                                             <td className="py-4 px-6 font-medium text-gray-800">
-                                                                {firstName}
-                                                            </td>
-                                                            <td className="py-4 px-6 text-gray-700">
                                                                 {lastName}
+                                                            </td>
+                                                            <td className="py-4 px-6  text-gray-700">
+                                                                {firstName}
                                                             </td>
                                                             <td className="py-4 px-6">
                                                                 <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">
@@ -1400,68 +1526,74 @@ const Dashboard: React.FC = () => {
 
                                 <tbody className="divide-y divide-gray-100">
                                     {projects.length > 0 ? (
-                                        projects.map((project, index) => (
-                                            <tr
-                                                key={project.id}
-                                                // Hover subtil avec une couleur de survol professionnelle
-                                                className="hover:bg-indigo-50/50 transition-colors duration-200"
-                                            >
-                                                <td className="py-4 px-6 font-medium text-gray-900 group-hover:text-indigo-700">
-                                                    {project.title}
-                                                </td>
-                                                <td className="py-4 px-6 text-gray-600 max-w-sm">
-                                                    {/* Maintien du line-clamp pour une gestion propre de la description */}
-                                                    <div className="line-clamp-2">
-                                                        {project.description}
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    {project.students.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {project.students.slice(0, 3).map((student) => (
-                                                                <span
-                                                                    key={student.id}
-                                                                    // Badges plus sobres, mais bien contrastés
-                                                                    className="px-3 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium"
-                                                                >
-                                                                    {student.user.name}
-                                                                </span>
-                                                            ))}
-                                                            {project.students.length > 3 && (
-                                                                <span className="px-3 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
-                                                                    +{project.students.length - 3}
-                                                                </span>
-                                                            )}
+                                        projects
+                                            .sort((a, b) => {
+                                                const dateA = new Date(a.created_at ?? 0).getTime();
+                                                const dateB = new Date(b.created_at ?? 0).getTime();
+                                                return dateB - dateA; // du plus ancien au plus récent
+                                            })
+                                            .map((project) => (
+                                                <tr
+                                                    key={project.id}
+                                                    // Hover subtil avec une couleur de survol professionnelle
+                                                    className="hover:bg-indigo-50/50 transition-colors duration-200"
+                                                >
+                                                    <td className="py-4 px-6 font-medium text-gray-900 group-hover:text-indigo-700">
+                                                        {project.title}
+                                                    </td>
+                                                    <td className="py-4 px-6 text-gray-600 max-w-sm">
+                                                        {/* Maintien du line-clamp pour une gestion propre de la description */}
+                                                        <div className="line-clamp-2">
+                                                            {project.description}
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-gray-400 italic text-sm">Aucun assignement</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <div className="flex justify-center space-x-2">
-                                                        {/* Boutons d'action unifiés (sans dégradé exagéré) */}
-                                                        <button
-                                                            onClick={() => handleEditProject(project)}
-                                                            className="p-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors duration-200 shadow-md flex items-center justify-center"
-                                                            title="Éditer le projet"
-                                                        >
-                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
-                                                            Modifier
-                                                        </button>
+                                                    </td>
+                                                    <td className="py-4 px-6">
+                                                        {project.students.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {project.students.slice(0, 3).map((student) => (
+                                                                    <span
+                                                                        key={student.id}
+                                                                        // Badges plus sobres, mais bien contrastés
+                                                                        className="px-3 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium"
+                                                                    >
+                                                                        {student.user.name}
+                                                                    </span>
+                                                                ))}
+                                                                {project.students.length > 3 && (
+                                                                    <span className="px-3 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
+                                                                        +{project.students.length - 3}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic text-sm">Aucun assignement</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4 px-6">
+                                                        <div className="flex justify-center space-x-2">
+                                                            {/* Boutons d'action unifiés (sans dégradé exagéré) */}
+                                                            <button
+                                                                onClick={() => handleEditProject(project)}
+                                                                className="p-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors duration-200 shadow-md flex items-center justify-center"
+                                                                title="Éditer le projet"
+                                                            >
+                                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-6l4 4m-4-4l-9 9m9-9l9 9"></path></svg>
+                                                                Modifier
+                                                            </button>
 
-                                                        <button
-                                                            onClick={() => handleDeleteProject(project.id)}
-                                                            className="p-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-800 transition-colors duration-200 shadow-md flex items-center justify-center"
-                                                            title="Supprimer le projet"
-                                                          
-                                                        >
-                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                          Supprimer
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
+                                                            <button
+                                                                onClick={() => handleDeleteProject(project.id)}
+                                                                className="p-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-800 transition-colors duration-200 shadow-md flex items-center justify-center"
+                                                                title="Supprimer le projet"
+
+                                                            >
+                                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                Supprimer
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
                                     ) : (
                                         <tr>
                                             <td colSpan={4} className="py-20 text-center bg-gray-50">
@@ -1499,387 +1631,387 @@ const Dashboard: React.FC = () => {
 
                 {/* Modal de confirmation de suppression */}
                 <Transition appear show={isDeleteModalOpen} as={Fragment}>
-    {/* Z-index élevé (z-50) pour s'assurer que la modale est au-dessus des autres éléments */}
-    <Dialog as="div" className="relative z-50" onClose={() => setIsDeleteModalOpen(false)}>
-        
-        {/* Backdrop (Amélioré: sombre et flou) */}
-        <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-        >
-            {/* Arrière-plan plus sombre et flou pour un effet moderne */}
-            <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm" />
-        </Transition.Child>
+                    {/* Z-index élevé (z-50) pour s'assurer que la modale est au-dessus des autres éléments */}
+                    <Dialog as="div" className="relative z-50" onClose={() => setIsDeleteModalOpen(false)}>
 
-        <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    {/* Conteneur de la modale : max-w-sm (légèrement réduit) et padding p-6 */}
-                    <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
-                        
-                        {/* Contenu de la modale */}
-                        <div className="sm:flex sm:items-start">
-                            {/* Icône de danger (Placeholder, nécessite une librairie d'icônes) */}
-                            <div className="mx-auto flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-12 sm:w-12">
-                                {/* Remplacez par votre icône de suppression/alerte (ex: <XCircleIcon className="h-6 w-6 text-red-600" />) */}
-                                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.857 3.375 2.75 3.375h13.71c1.892 0 3.614-1.875 2.748-3.375L15.378 3.84a1.725 1.725 0 00-3.003 0l-6.326 11.23a1.725 1.725 0 00-.001 1.764z" />
-                                </svg>
-                            </div>
-                            
-                            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                                <Dialog.Title as="h3" className="text-xl font-bold leading-6 text-gray-900">
-                                    Confirmer la suppression
-                                </Dialog.Title>
-                                <div className="mt-2">
-                                    <p className="text-sm text-gray-500">
-                                        Voulez-vous vraiment supprimer {itemTypeToDelete === 'student' ? 'cet étudiant' : 'ce projet'} ? Cette action est irréversible et toutes les données associées seront perdues.
-                                    </p>
-                                </div>
+                        {/* Backdrop (Amélioré: sombre et flou) */}
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            {/* Arrière-plan plus sombre et flou pour un effet moderne */}
+                            <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm" />
+                        </Transition.Child>
+
+                        <div className="fixed inset-0 overflow-y-auto">
+                            <div className="flex min-h-full items-center justify-center p-4 text-center">
+
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    {/* Conteneur de la modale : max-w-sm (légèrement réduit) et padding p-6 */}
+                                    <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+
+                                        {/* Contenu de la modale */}
+                                        <div className="sm:flex sm:items-start">
+                                            {/* Icône de danger (Placeholder, nécessite une librairie d'icônes) */}
+                                            <div className="mx-auto flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-12 sm:w-12">
+                                                {/* Remplacez par votre icône de suppression/alerte (ex: <XCircleIcon className="h-6 w-6 text-red-600" />) */}
+                                                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.857 3.375 2.75 3.375h13.71c1.892 0 3.614-1.875 2.748-3.375L15.378 3.84a1.725 1.725 0 00-3.003 0l-6.326 11.23a1.725 1.725 0 00-.001 1.764z" />
+                                                </svg>
+                                            </div>
+
+                                            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                                <Dialog.Title as="h3" className="text-xl font-bold leading-6 text-gray-900">
+                                                    Confirmer la suppression
+                                                </Dialog.Title>
+                                                <div className="mt-2">
+                                                    <p className="text-sm text-gray-500">
+                                                        Voulez-vous vraiment supprimer {itemTypeToDelete === 'student' ? 'cet étudiant' : 'ce projet'} ? Cette action est irréversible et toutes les données associées seront perdues.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Boutons d'action (Positionnement modernisé : Annuler à gauche, Action à droite) */}
+                                        <div className="mt-6 flex justify-end space-x-3">
+
+                                            {/* Bouton Annuler (Secondaire) */}
+                                            <button
+                                                type="button"
+                                                className="inline-flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition duration-150 ease-in-out"
+                                                onClick={() => setIsDeleteModalOpen(false)}
+                                            >
+                                                Annuler
+                                            </button>
+
+                                            {/* Bouton Supprimer (Principal - Couleur Rouge) */}
+                                            <button
+                                                type="button"
+                                                onClick={confirmDelete}
+                                                disabled={loadindDelete}
+                                                // Design de bouton plus large et plus pro
+                                                className={`inline-flex justify-center rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out ${loadindDelete
+                                                    ? 'bg-red-400 cursor-not-allowed' // État de chargement
+                                                    : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2' // État normal
+                                                    }`}
+                                            >
+                                                {loadindDelete ? 'Suppression...' : 'Supprimer'}
+                                            </button>
+                                        </div>
+
+                                    </Dialog.Panel>
+                                </Transition.Child>
                             </div>
                         </div>
-
-                        {/* Boutons d'action (Positionnement modernisé : Annuler à gauche, Action à droite) */}
-                        <div className="mt-6 flex justify-end space-x-3">
-                            
-                            {/* Bouton Annuler (Secondaire) */}
-                            <button
-                                type="button"
-                                className="inline-flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition duration-150 ease-in-out"
-                                onClick={() => setIsDeleteModalOpen(false)}
-                            >
-                                Annuler
-                            </button>
-                            
-                            {/* Bouton Supprimer (Principal - Couleur Rouge) */}
-                            <button
-                                type="button"
-                                onClick={confirmDelete}
-                                disabled={loadindDelete}
-                                // Design de bouton plus large et plus pro
-                                className={`inline-flex justify-center rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-white shadow-md transition duration-150 ease-in-out ${loadindDelete
-                                    ? 'bg-red-400 cursor-not-allowed' // État de chargement
-                                    : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2' // État normal
-                                }`}
-                            >
-                                {loadindDelete ? 'Suppression...' : 'Supprimer'}
-                            </button>
-                        </div>
-
-                    </Dialog.Panel>
-                </Transition.Child>
-            </div>
-        </div>
-    </Dialog>
-</Transition>
+                    </Dialog>
+                </Transition>
 
                 {/* Modal de création d'étudiant */}
                 <Transition appear show={isCreateStudentModalOpen} as={Fragment}>
-    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateStudentModalOpen(false)}>
-        {/* Backdrop (Assombrissement de l'arrière-plan) */}
-        <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-        >
-            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
-            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
-        </Transition.Child>
+                    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateStudentModalOpen(false)}>
+                        {/* Backdrop (Assombrissement de l'arrière-plan) */}
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
+                            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                        </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                {/* Contenu de la modale */}
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
-                        
-                        {/* En-tête de la modale */}
-                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
-                            Créer un nouvel étudiant
-                        </Dialog.Title>
-                        <p className="text-sm text-gray-500 mb-6">
-                            Veuillez remplir tous les champs pour enregistrer un nouvel étudiant.
-                        </p>
-
-                        <form onSubmit={handleStudentFormSubmit} className="space-y-6">
-                            
-                            {/* Champs du formulaire */}
-                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                                {/* Champ: Prénom */}
-                                <div>
-                                    {/* Utilisation de 'htmlFor' pour l'accessibilité */}
-                                    <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
-                                    <input
-                                        id="first_name"
-                                        type="text"
-                                        name="first_name"
-                                        value={formDataStudent.first_name}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        placeholder="Ex: Jean"
-                                        // Classes améliorées: plus de padding, border plus subtile, ombre au focus
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                    />
-                                </div>
-                                
-                                {/* Champ: Nom de famille */}
-                                <div>
-                                    <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
-                                    <input
-                                        id="last_name"
-                                        type="text"
-                                        name="last_name"
-                                        value={formDataStudent.last_name}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        placeholder="Ex: Dupont"
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                    />
-                                </div>
-                            </div>
-                            
-                            {/* Champ: Email */}
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={formDataStudent.email}
-                                    onChange={handleStudentFormChange}
-                                    required
-                                    placeholder="Ex: jean.dupont@ecole.com"
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                />
-                            </div>
-                            
-                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                                {/* Champ: Mot de passe */}
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
-                                    <input
-                                        id="password"
-                                        type="password"
-                                        name="password"
-                                        value={formDataStudent.password}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        placeholder="Minimum 8 caractères"
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                    />
-                                </div>
-
-                                {/* Champ: Matricule étudiant */}
-                                <div>
-                                    <label htmlFor="student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
-                                    <input
-                                        id="student_id"
-                                        type="text"
-                                        name="student_id"
-                                        value={formDataStudent.student_id}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        placeholder="Ex: S2025-4567"
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            
-                            {/* Champ: Classe */}
-                            <div>
-                                <label htmlFor="class_group" className="block text-sm font-medium text-gray-700">Classe</label>
-                                <select
-                                    id="class_group"
-                                    name="class_group"
-                                    value={formDataStudent.class_group}
-                                    onChange={handleStudentFormChange}
-                                    required
-                                    // Utilisation des mêmes classes de style pour l'uniformité
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                        <div className="fixed inset-0 overflow-y-auto">
+                            <div className="flex min-h-full items-center justify-center p-4 text-center">
+                                {/* Contenu de la modale */}
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
                                 >
-                                    {/* Ajouter une option par défaut désactivée et non sélectionnable */}
-                                    <option value="" disabled>Sélectionner une classe</option>
-                                    <option value="L1 Info">L1 Info</option>
-                                    <option value="L2 Info">L2 Info</option>
-                                    <option value="L3 Info">L3 Info</option>
-                                </select>
+                                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
+
+                                        {/* En-tête de la modale */}
+                                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
+                                            Créer un nouvel étudiant
+                                        </Dialog.Title>
+                                        <p className="text-sm text-gray-500 mb-6">
+                                            Veuillez remplir tous les champs pour enregistrer un nouvel étudiant.
+                                        </p>
+
+                                        <form onSubmit={handleStudentFormSubmit} className="space-y-6">
+
+                                            {/* Champs du formulaire */}
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                                {/* Champ: Prénom */}
+                                                <div>
+                                                    {/* Utilisation de 'htmlFor' pour l'accessibilité */}
+                                                    <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
+                                                    <input
+                                                        id="first_name"
+                                                        type="text"
+                                                        name="first_name"
+                                                        value={formDataStudent.first_name}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        placeholder="Ex: Jean"
+                                                        // Classes améliorées: plus de padding, border plus subtile, ombre au focus
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                    />
+                                                </div>
+
+                                                {/* Champ: Nom de famille */}
+                                                <div>
+                                                    <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
+                                                    <input
+                                                        id="last_name"
+                                                        type="text"
+                                                        name="last_name"
+                                                        value={formDataStudent.last_name}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        placeholder="Ex: Dupont"
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Champ: Email */}
+                                            <div>
+                                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                                                <input
+                                                    id="email"
+                                                    type="email"
+                                                    name="email"
+                                                    value={formDataStudent.email}
+                                                    onChange={handleStudentFormChange}
+                                                    required
+                                                    placeholder="Ex: jean.dupont@ecole.com"
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                />
+                                            </div>
+
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                                {/* Champ: Mot de passe */}
+                                                <div>
+                                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
+                                                    <input
+                                                        id="password"
+                                                        type="password"
+                                                        name="password"
+                                                        value={formDataStudent.password}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        placeholder="Minimum 8 caractères"
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                    />
+                                                </div>
+
+                                                {/* Champ: Matricule étudiant */}
+                                                <div>
+                                                    <label htmlFor="student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
+                                                    <input
+                                                        id="student_id"
+                                                        type="text"
+                                                        name="student_id"
+                                                        value={formDataStudent.student_id}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        placeholder="Ex: S2025-4567"
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+
+                                            {/* Champ: Classe */}
+                                            <div>
+                                                <label htmlFor="class_group" className="block text-sm font-medium text-gray-700">Classe</label>
+                                                <select
+                                                    id="class_group"
+                                                    name="class_group"
+                                                    value={formDataStudent.class_group}
+                                                    onChange={handleStudentFormChange}
+                                                    required
+                                                    // Utilisation des mêmes classes de style pour l'uniformité
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                                >
+                                                    {/* Ajouter une option par défaut désactivée et non sélectionnable */}
+                                                    <option value="" disabled>Sélectionner une classe</option>
+                                                    <option value="L1 Info">L1 Info</option>
+                                                    <option value="L2 Info">L2 Info</option>
+                                                    <option value="L3 Info">L3 Info</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Boutons d'action */}
+                                            <div className="pt-4 flex justify-end space-x-3">
+
+                                                {/* Bouton Annuler (Secondaire) */}
+                                                <button
+                                                    type="button"
+                                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                                    onClick={() => setIsCreateStudentModalOpen(false)}
+                                                >
+                                                    Annuler
+                                                </button>
+
+                                                {/* Bouton Créer (Principal) */}
+                                                <button
+                                                    type="submit"
+                                                    // Classes de bouton principal améliorées: couleur plus profonde, ombre
+                                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting
+                                                        ? 'bg-indigo-400 cursor-not-allowed' // État de soumission
+                                                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2' // État normal
+                                                        }`}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {isSubmitting ? 'Création en cours...' : 'Créer l’étudiant'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </Dialog.Panel>
+                                </Transition.Child>
                             </div>
-                            
-                            {/* Boutons d'action */}
-                            <div className="pt-4 flex justify-end space-x-3">
-                                
-                                {/* Bouton Annuler (Secondaire) */}
-                                <button
-                                    type="button"
-                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
-                                    onClick={() => setIsCreateStudentModalOpen(false)}
-                                >
-                                    Annuler
-                                </button>
-                                
-                                {/* Bouton Créer (Principal) */}
-                                <button
-                                    type="submit"
-                                    // Classes de bouton principal améliorées: couleur plus profonde, ombre
-                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
-                                        ? 'bg-indigo-400 cursor-not-allowed' // État de soumission
-                                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2' // État normal
-                                    }`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Création en cours...' : 'Créer l’étudiant'}
-                                </button>
-                            </div>
-                        </form>
-                    </Dialog.Panel>
-                </Transition.Child>
-            </div>
-        </div>
-    </Dialog>
-</Transition>
+                        </div>
+                    </Dialog>
+                </Transition>
 
                 {/* Modal de modification d'étudiant */}
                 <Transition appear show={isEditModalOpen} as={Fragment}>
-    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
-    <Dialog as="div" className="relative z-50" onClose={() => setIsEditModalOpen(false)}>
-        
-        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
-        <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-        >
-            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
-            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
-        </Transition.Child>
+                    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+                    <Dialog as="div" className="relative z-50" onClose={() => setIsEditModalOpen(false)}>
 
-        <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                
-                {/* Contenu de la modale */}
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    {/* Conteneur de la modale : max-w-lg, p-8, rounded-xl, shadow-2xl */}
-                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
-                        
-                        {/* En-tête de la modale */}
-                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
-                            Modifier l'étudiant
-                        </Dialog.Title>
-                        <p className="text-sm text-gray-500 mb-6">
-                            Mettez à jour les informations de l'étudiant.
-                        </p>
+                        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            {/* Utilisation d'un fond plus opaque et flou pour un effet professionnel */}
+                            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                        </Transition.Child>
 
-                        <form onSubmit={handleUpdateStudent} className="space-y-6">
-                            
-                            {/* Grille pour les noms */}
-                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                                {/* Champ: Prénom */}
-                                <div>
-                                    <label htmlFor="edit_first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
-                                    <input
-                                        id="edit_first_name"
-                                        type="text"
-                                        name="first_name"
-                                        value={formDataStudent.first_name}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                    />
-                                </div>
-                                
-                                {/* Champ: Nom de famille */}
-                                <div>
-                                    <label htmlFor="edit_last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
-                                    <input
-                                        id="edit_last_name"
-                                        type="text"
-                                        name="last_name"
-                                        value={formDataStudent.last_name}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                    />
-                                </div>
-                            </div>
-                            
-                            {/* Grille pour Matricule et Classe */}
-                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                                {/* Champ: Matricule étudiant */}
-                                <div>
-                                    <label htmlFor="edit_student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
-                                    <input
-                                        id="edit_student_id"
-                                        type="text"
-                                        name="student_id"
-                                        value={formDataStudent.student_id}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        // Rendre le matricule en lecture seule s'il sert d'identifiant permanent.
-                                        // Si vous voulez qu'il soit modifiable, retirez 'readOnly'
-                                        readOnly
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
-                                    />
-                                </div>
-                                
-                                {/* Champ: Classe */}
-                                <div>
-                                    <label htmlFor="edit_class_group" className="block text-sm font-medium text-gray-700">Classe</label>
-                                    <select
-                                        id="edit_class_group"
-                                        name="class_group"
-                                        value={formDataStudent.class_group}
-                                        onChange={handleStudentFormChange}
-                                        required
-                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                    >
-                                        <option value="" disabled>Sélectionner une classe</option>
-                                        <option value="L1 Info">L1 Info</option>
-                                        <option value="L2 Info">L2 Info</option>
-                                        <option value="L3 Info">L3 Info</option>
-                                    </select>
-                                </div>
-                            </div>
+                        <div className="fixed inset-0 overflow-y-auto">
+                            <div className="flex min-h-full items-center justify-center p-4 text-center">
 
-                            {/* Optionnel: Champ pour changer le mot de passe (souvent géré séparément) */}
-                            {/* <div className="pt-2">
+                                {/* Contenu de la modale */}
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    {/* Conteneur de la modale : max-w-lg, p-8, rounded-xl, shadow-2xl */}
+                                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-8 text-left align-middle shadow-2xl transition-all">
+
+                                        {/* En-tête de la modale */}
+                                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-2">
+                                            Modifier l'étudiant
+                                        </Dialog.Title>
+                                        <p className="text-sm text-gray-500 mb-6">
+                                            Mettez à jour les informations de l'étudiant.
+                                        </p>
+
+                                        <form onSubmit={handleUpdateStudent} className="space-y-6">
+
+                                            {/* Grille pour les noms */}
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                                {/* Champ: Prénom */}
+                                                <div>
+                                                    <label htmlFor="edit_first_name" className="block text-sm font-medium text-gray-700">Prénom</label>
+                                                    <input
+                                                        id="edit_first_name"
+                                                        type="text"
+                                                        name="first_name"
+                                                        value={formDataStudent.first_name}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    />
+                                                </div>
+
+                                                {/* Champ: Nom de famille */}
+                                                <div>
+                                                    <label htmlFor="edit_last_name" className="block text-sm font-medium text-gray-700">Nom de famille</label>
+                                                    <input
+                                                        id="edit_last_name"
+                                                        type="text"
+                                                        name="last_name"
+                                                        value={formDataStudent.last_name}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Grille pour Matricule et Classe */}
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                                {/* Champ: Matricule étudiant */}
+                                                <div>
+                                                    <label htmlFor="edit_student_id" className="block text-sm font-medium text-gray-700">Matricule étudiant</label>
+                                                    <input
+                                                        id="edit_student_id"
+                                                        type="text"
+                                                        name="student_id"
+                                                        value={formDataStudent.student_id}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        // Rendre le matricule en lecture seule s'il sert d'identifiant permanent.
+                                                        // Si vous voulez qu'il soit modifiable, retirez 'readOnly'
+                                                        readOnly
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
+                                                    />
+                                                </div>
+
+                                                {/* Champ: Classe */}
+                                                <div>
+                                                    <label htmlFor="edit_class_group" className="block text-sm font-medium text-gray-700">Classe</label>
+                                                    <select
+                                                        id="edit_class_group"
+                                                        name="class_group"
+                                                        value={formDataStudent.class_group}
+                                                        onChange={handleStudentFormChange}
+                                                        required
+                                                        className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    >
+                                                        <option value="" disabled>Sélectionner une classe</option>
+                                                        <option value="L1 Info">L1 Info</option>
+                                                        <option value="L2 Info">L2 Info</option>
+                                                        <option value="L3 Info">L3 Info</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {/* Optionnel: Champ pour changer le mot de passe (souvent géré séparément) */}
+                                            {/* <div className="pt-2">
                                 <label htmlFor="edit_password" className="block text-sm font-medium text-gray-700">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
                                 <input
                                     id="edit_password"
@@ -1893,324 +2025,324 @@ const Dashboard: React.FC = () => {
                             </div>
                             */}
 
-                            {/* Boutons d'action */}
-                            <div className="pt-4 flex justify-end space-x-3">
-                                
-                                {/* Bouton Annuler (Secondaire) */}
-                                <button
-                                    type="button"
-                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
-                                    onClick={() => setIsEditModalOpen(false)}
-                                >
-                                    Annuler
-                                </button>
-                                
-                                {/* Bouton Mise à jour (Principal - Couleur Bleue pour l'action principale) */}
-                                <button
-                                    type="submit"
-                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${update 
-                                        ? 'bg-blue-400 cursor-not-allowed' // État de soumission
-                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' // État normal
-                                    }`}
-                                    disabled={update}
-                                >
-                                    {update ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
-                                </button>
+                                            {/* Boutons d'action */}
+                                            <div className="pt-4 flex justify-end space-x-3">
+
+                                                {/* Bouton Annuler (Secondaire) */}
+                                                <button
+                                                    type="button"
+                                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                                    onClick={() => setIsEditModalOpen(false)}
+                                                >
+                                                    Annuler
+                                                </button>
+
+                                                {/* Bouton Mise à jour (Principal - Couleur Bleue pour l'action principale) */}
+                                                <button
+                                                    type="submit"
+                                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${update
+                                                        ? 'bg-blue-400 cursor-not-allowed' // État de soumission
+                                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' // État normal
+                                                        }`}
+                                                    disabled={update}
+                                                >
+                                                    {update ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </Dialog.Panel>
+                                </Transition.Child>
                             </div>
-                        </form>
-                    </Dialog.Panel>
-                </Transition.Child>
-            </div>
-        </div>
-    </Dialog>
-</Transition>
+                        </div>
+                    </Dialog>
+                </Transition>
 
                 {/* Modal de création de projet */}
                 <Transition appear show={isCreateProjectModalOpen} as={Fragment}>
-    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
-    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateProjectModalOpen(false)}>
-        
-        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
-        <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-        >
-            {/* Arrière-plan sombre et flou pour un effet professionnel */}
-            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
-        </Transition.Child>
+                    {/* Z-index plus élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+                    <Dialog as="div" className="relative z-50" onClose={() => setIsCreateProjectModalOpen(false)}>
 
-        <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                
-                {/* Contenu de la modale */}
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    {/* Conteneur de la modale : Largeur AUGMENTÉE à max-w-xl, padding maintenu à p-6 */}
-                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
-                        
-                        {/* En-tête de la modale */}
-                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-1">
-                            Créer un nouveau projet
-                        </Dialog.Title>
-                        <p className="text-sm text-gray-500 mb-5">
-                            Définissez les détails du projet et assignez les étudiants concernés.
-                        </p>
+                        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            {/* Arrière-plan sombre et flou pour un effet professionnel */}
+                            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                        </Transition.Child>
 
-                        <form onSubmit={handleCreateProjectSubmit} className="space-y-4"> {/* Espace réduit à space-y-4 */}
-                            
-                            {/* Champ: Nom du projet (Titre) */}
-                            <div>
-                                <label htmlFor="project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
-                                <input
-                                    id="project_title"
-                                    type="text"
-                                    name="title"
-                                    value={formDataProject.title}
-                                    onChange={handleProjectFormChange}
-                                    required
-                                    placeholder="Ex: Système de gestion scolaire v2"
-                                    // Focus vert pour l'action de création
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
-                                />
-                            </div>
-                            
-                            {/* Champ: Description */}
-                            <div>
-                                <label htmlFor="project_description" className="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea
-                                    id="project_description"
-                                    name="description"
-                                    value={formDataProject.description}
-                                    onChange={handleProjectFormChange}
-                                    required
-                                    rows={3} // Nombre de lignes réduit à 3 (Diminution de la hauteur)
-                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
-                                    // Focus vert
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
-                                />
-                            </div>
-                            
-                            {/* Sélection des étudiants */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Sélectionner les étudiants
-                                    <span className="ml-2 text-xs font-normal text-gray-500">(Sélectionnez un ou plusieurs étudiants)</span>
-                                </label>
-                                {/* Hauteur réduite pour compacter la modale */}
-                                <div className="h-36 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
-                                    {students.length > 0 ? (
-                                        students.map(student => (
-                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                        <div className="fixed inset-0 overflow-y-auto">
+                            <div className="flex min-h-full items-center justify-center p-4 text-center">
+
+                                {/* Contenu de la modale */}
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    {/* Conteneur de la modale : Largeur AUGMENTÉE à max-w-xl, padding maintenu à p-6 */}
+                                    <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+
+                                        {/* En-tête de la modale */}
+                                        <Dialog.Title as="h3" className="text-2xl font-extrabold leading-tight text-gray-900 mb-1">
+                                            Créer un nouveau projet
+                                        </Dialog.Title>
+                                        <p className="text-sm text-gray-500 mb-5">
+                                            Définissez les détails du projet et assignez les étudiants concernés.
+                                        </p>
+
+                                        <form onSubmit={handleCreateProjectSubmit} className="space-y-4"> {/* Espace réduit à space-y-4 */}
+
+                                            {/* Champ: Nom du projet (Titre) */}
+                                            <div>
+                                                <label htmlFor="project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
                                                 <input
-                                                    type="checkbox"
-                                                    id={`student-${student.id}`}
-                                                    name="student_ids"
-                                                    checked={formDataProject.student_ids.includes(student.id)}
-                                                    onChange={() => handleStudentSelection(student.id)}
-                                                    // Checkbox vert
-                                                    className="h-4 w-4 rounded text-green-600 focus:ring-green-500 border-gray-300"
+                                                    id="project_title"
+                                                    type="text"
+                                                    name="title"
+                                                    value={formDataProject.title}
+                                                    onChange={handleProjectFormChange}
+                                                    required
+                                                    placeholder="Ex: Système de gestion scolaire v2"
+                                                    // Focus vert pour l'action de création
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
                                                 />
-                                                <label htmlFor={`student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
-                                                    {student.user.name} 
-                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
-                                                </label>
                                             </div>
-                                        ))
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                            <p className="text-gray-500 text-sm">
-                                                Aucun étudiant disponible. Veuillez en créer un d'abord.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+
+                                            {/* Champ: Description */}
+                                            <div>
+                                                <label htmlFor="project_description" className="block text-sm font-medium text-gray-700">Description</label>
+                                                <textarea
+                                                    id="project_description"
+                                                    name="description"
+                                                    value={formDataProject.description}
+                                                    onChange={handleProjectFormChange}
+                                                    required
+                                                    rows={3} // Nombre de lignes réduit à 3 (Diminution de la hauteur)
+                                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
+                                                    // Focus vert
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 shadow-sm"
+                                                />
+                                            </div>
+
+                                            {/* Sélection des étudiants */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Sélectionner les étudiants
+                                                    <span className="ml-2 text-xs font-normal text-gray-500">(Sélectionnez un ou plusieurs étudiants)</span>
+                                                </label>
+                                                {/* Hauteur réduite pour compacter la modale */}
+                                                <div className="h-36 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+                                                    {students.length > 0 ? (
+                                                        students.map(student => (
+                                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`student-${student.id}`}
+                                                                    name="student_ids"
+                                                                    checked={formDataProject.student_ids.includes(student.id)}
+                                                                    onChange={() => handleStudentSelection(student.id)}
+                                                                    // Checkbox vert
+                                                                    className="h-4 w-4 rounded text-green-600 focus:ring-green-500 border-gray-300"
+                                                                />
+                                                                <label htmlFor={`student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                                                    {student.user.name}
+                                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
+                                                                </label>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full">
+                                                            <p className="text-gray-500 text-sm">
+                                                                Aucun étudiant disponible. Veuillez en créer un d'abord.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Boutons d'action */}
+                                            <div className="pt-4 flex justify-end space-x-3">
+
+                                                {/* Bouton Annuler (Secondaire) */}
+                                                <button
+                                                    type="button"
+                                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                                    onClick={() => setIsCreateProjectModalOpen(false)}
+                                                >
+                                                    Annuler
+                                                </button>
+
+                                                {/* Bouton Créer (Principal - Couleur Verte) */}
+                                                <button
+                                                    type="submit"
+                                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting
+                                                        ? 'bg-indigo-400 cursor-not-allowed' // État de soumission
+                                                        : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2' // État normal
+                                                        }`}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {isSubmitting ? 'Création en cours...' : 'Créer le projet'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </Dialog.Panel>
+                                </Transition.Child>
                             </div>
-                            
-                            {/* Boutons d'action */}
-                            <div className="pt-4 flex justify-end space-x-3">
-                                
-                                {/* Bouton Annuler (Secondaire) */}
-                                <button
-                                    type="button"
-                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
-                                    onClick={() => setIsCreateProjectModalOpen(false)}
-                                >
-                                    Annuler
-                                </button>
-                                
-                                {/* Bouton Créer (Principal - Couleur Verte) */}
-                                <button
-                                    type="submit"
-                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
-                                        ? 'bg-green-400 cursor-not-allowed' // État de soumission
-                                        : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2' // État normal
-                                    }`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Création en cours...' : 'Créer le projet'}
-                                </button>
-                            </div>
-                        </form>
-                    </Dialog.Panel>
-                </Transition.Child>
-            </div>
-        </div>
-    </Dialog>
-</Transition>
+                        </div>
+                    </Dialog>
+                </Transition>
                 {/* Modal de modification de projet */}
                 <Transition appear show={isEditProjectModalOpen} as={Fragment}>
-    {/* Z-index élevé pour s'assurer que la modale est au-dessus des autres éléments */}
-    <Dialog as="div" className="relative z-50" onClose={() => setIsEditProjectModalOpen(false)}>
-        
-        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
-        <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-        >
-            {/* Arrière-plan sombre et flou pour un effet professionnel */}
-            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
-        </Transition.Child>
+                    {/* Z-index élevé pour s'assurer que la modale est au-dessus des autres éléments */}
+                    <Dialog as="div" className="relative z-50" onClose={() => setIsEditProjectModalOpen(false)}>
 
-        <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-                
-                {/* Contenu de la modale */}
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    {/* Conteneur de la modale : Largeur max conservée à max-w-lg, padding réduit à p-6 */}
-                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
-                        
-                        {/* En-tête de la modale */}
-                        {/* Marge inférieure réduite pour compacter l'espace */}
-                        <Dialog.Title as="h3" className="text-xl font-extrabold leading-tight text-gray-900 mb-1">
-                            Modifier le projet
-                        </Dialog.Title>
-                        <p className="text-sm text-gray-500 mb-5">
-                            Mettez à jour les détails du projet et gérez les étudiants assignés.
-                        </p>
+                        {/* Backdrop (Assombrissement de l'arrière-plan avec flou) */}
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            {/* Arrière-plan sombre et flou pour un effet professionnel */}
+                            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                        </Transition.Child>
 
-                        <form onSubmit={handleUpdateProject} className="space-y-4"> {/* Espace réduit à space-y-4 */}
-                            
-                            {/* Champ: Nom du projet (Titre) */}
-                            <div>
-                                <label htmlFor="edit_project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
-                                <input
-                                    id="edit_project_title"
-                                    type="text"
-                                    name="title"
-                                    value={formDataProject.title}
-                                    onChange={handleProjectFormChange}
-                                    required
-                                    placeholder="Ex: Système de gestion scolaire v2"
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                />
-                            </div>
-                            
-                            {/* Champ: Description */}
-                            <div>
-                                <label htmlFor="edit_project_description" className="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea
-                                    id="edit_project_description"
-                                    name="description"
-                                    value={formDataProject.description}
-                                    onChange={handleProjectFormChange}
-                                    required
-                                    rows={3} // Nombre de lignes réduit à 3
-                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
-                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                />
-                            </div>
-                            
-                            {/* Sélection des étudiants */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Étudiants assignés
-                                    <span className="ml-2 text-xs font-normal text-gray-500">(Cochez ou décochez pour modifier la liste)</span>
-                                </label>
-                                {/* Hauteur réduite pour compacter la modale */}
-                                <div className="h-32 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
-                                    {students.length > 0 ? (
-                                        students.map(student => (
-                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                        <div className="fixed inset-0 overflow-y-auto">
+                            <div className="flex min-h-full items-center justify-center p-4 text-center">
+
+                                {/* Contenu de la modale */}
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    {/* Conteneur de la modale : Largeur max conservée à max-w-lg, padding réduit à p-6 */}
+                                    <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-2xl transition-all">
+
+                                        {/* En-tête de la modale */}
+                                        {/* Marge inférieure réduite pour compacter l'espace */}
+                                        <Dialog.Title as="h3" className="text-xl font-extrabold leading-tight text-gray-900 mb-1">
+                                            Modifier le projet
+                                        </Dialog.Title>
+                                        <p className="text-sm text-gray-500 mb-5">
+                                            Mettez à jour les détails du projet et gérez les étudiants assignés.
+                                        </p>
+
+                                        <form onSubmit={handleUpdateProject} className="space-y-4"> {/* Espace réduit à space-y-4 */}
+
+                                            {/* Champ: Nom du projet (Titre) */}
+                                            <div>
+                                                <label htmlFor="edit_project_title" className="block text-sm font-medium text-gray-700">Nom du projet</label>
                                                 <input
-                                                    type="checkbox"
-                                                    id={`edit-student-${student.id}`}
-                                                    name="student_ids"
-                                                    checked={formDataProject.student_ids.includes(student.id)}
-                                                    onChange={() => handleStudentSelection(student.id)}
-                                                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                    id="edit_project_title"
+                                                    type="text"
+                                                    name="title"
+                                                    value={formDataProject.title}
+                                                    onChange={handleProjectFormChange}
+                                                    required
+                                                    placeholder="Ex: Système de gestion scolaire v2"
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                                 />
-                                                <label htmlFor={`edit-student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
-                                                    {student.user.name} 
-                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
-                                                </label>
                                             </div>
-                                        ))
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                            <p className="text-gray-500 text-sm">
-                                                Aucun étudiant disponible.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+
+                                            {/* Champ: Description */}
+                                            <div>
+                                                <label htmlFor="edit_project_description" className="block text-sm font-medium text-gray-700">Description</label>
+                                                <textarea
+                                                    id="edit_project_description"
+                                                    name="description"
+                                                    value={formDataProject.description}
+                                                    onChange={handleProjectFormChange}
+                                                    required
+                                                    rows={3} // Nombre de lignes réduit à 3
+                                                    placeholder="Décrivez brièvement les objectifs et les livrables du projet."
+                                                    className="w-full mt-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                />
+                                            </div>
+
+                                            {/* Sélection des étudiants */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Étudiants assignés
+                                                    <span className="ml-2 text-xs font-normal text-gray-500">(Cochez ou décochez pour modifier la liste)</span>
+                                                </label>
+                                                {/* Hauteur réduite pour compacter la modale */}
+                                                <div className="h-32 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+                                                    {students.length > 0 ? (
+                                                        students.map(student => (
+                                                            <div key={student.id} className="flex items-center space-x-3 py-1.5 border-b last:border-b-0 border-gray-100">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`edit-student-${student.id}`}
+                                                                    name="student_ids"
+                                                                    checked={formDataProject.student_ids.includes(student.id)}
+                                                                    onChange={() => handleStudentSelection(student.id)}
+                                                                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                                />
+                                                                <label htmlFor={`edit-student-${student.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                                                                    {student.user.name}
+                                                                    <span className="text-gray-500 font-normal ml-1">({student.student_id})</span>
+                                                                </label>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full">
+                                                            <p className="text-gray-500 text-sm">
+                                                                Aucun étudiant disponible.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Boutons d'action */}
+                                            <div className="pt-4 flex justify-end space-x-3">
+
+                                                {/* Bouton Annuler (Secondaire) */}
+                                                <button
+                                                    type="button"
+                                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
+                                                    onClick={() => setIsEditProjectModalOpen(false)}
+                                                >
+                                                    Annuler
+                                                </button>
+
+                                                {/* Bouton Mettre à jour (Principal - Couleur Bleue) */}
+                                                <button
+                                                    type="submit"
+                                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting
+                                                        ? 'bg-blue-400 cursor-not-allowed'
+                                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                                                        }`}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {isSubmitting ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </Dialog.Panel>
+                                </Transition.Child>
                             </div>
-                            
-                            {/* Boutons d'action */}
-                            <div className="pt-4 flex justify-end space-x-3">
-                                
-                                {/* Bouton Annuler (Secondaire) */}
-                                <button
-                                    type="button"
-                                    className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 ease-in-out"
-                                    onClick={() => setIsEditProjectModalOpen(false)}
-                                >
-                                    Annuler
-                                </button>
-                                
-                                {/* Bouton Mettre à jour (Principal - Couleur Bleue) */}
-                                <button
-                                    type="submit"
-                                    className={`px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition duration-150 ease-in-out shadow-md ${isSubmitting 
-                                        ? 'bg-blue-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                                    }`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Mise à jour en cours...' : 'Sauvegarder les modifications'}
-                                </button>
-                            </div>
-                        </form>
-                    </Dialog.Panel>
-                </Transition.Child>
-            </div>
-        </div>
-    </Dialog>
-</Transition>
+                        </div>
+                    </Dialog>
+                </Transition>
             </main>
         </div>
     );

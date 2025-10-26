@@ -206,7 +206,7 @@ const MeritChart = () => {
 
   return (
     <div className="pr-2 pl-2  min-h-screen">
-      <h1 className="text-3xl font-extrabold text-center mb-8 text-indigo-800 border-b-2 pb-2 border-indigo-200">
+      <h1 className="text-3xl font-extrabold text-center mb-8 text-indigo-800 border-b-2 pb-2">
         🏆 Tableau de Bord du Mérite des Étudiants
       </h1>
 

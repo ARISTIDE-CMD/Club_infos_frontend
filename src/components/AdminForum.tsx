@@ -85,7 +85,7 @@ export default function AdminForum() {
     fetchAllMessages();
   }, []);
 
-  if (loading) return <p className="text-gray-500">Chargement des messages...</p>;
+  if (loading) return <p className="text-gray-500 m-auto">Chargement des messages...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
   if (!chatData) return null;
 
